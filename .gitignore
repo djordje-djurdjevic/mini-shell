@@ -1,6 +1,11 @@
-*.o
+# executables
+shell
 *.out
 *.exe
+
+# object files
+*.o
+
+# build folders
 build/
 bin/
-.vscode/
