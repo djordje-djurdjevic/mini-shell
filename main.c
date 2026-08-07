@@ -30,7 +30,9 @@ int main() {
     while(1) {
         setbuf(stdout, NULL);
         printf("$ ");
-		fgets(input, MAX_SIZE - 1, stdin);
+		if (fgets(input, MAX_SIZE - 1, stdin) == NULL ) {
+            break; //EOF or error 
+        }
 		input[strcspn(input, "\n")] = '\0';
 
 
