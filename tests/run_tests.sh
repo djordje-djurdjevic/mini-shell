@@ -156,6 +156,7 @@ run_exact_output_test "single quote as literal" "echo \'hello\'" "'hello'"
 # ---------------------------------------------------------------------------
 # Backslash - in single quotes
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- backslash in single qoutes --${NC}"
 run_exact_output_test "backslash as literal" 'echo '\''shell\\\nscript'\''' 'shell\\\nscript'
 run_exact_output_test "literal inside single quotes" $"echo 'example\"test'" "example\"test"
 echo "content1" > "/tmp/shell_tests/no slash 1"
@@ -170,6 +171,7 @@ content3"
 # ---------------------------------------------------------------------------
 # Backslash - in double quotes
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- backslash in double qoutes --${NC}"
 run_exact_output_test "escape backslash in \"\"" "echo \"A \\ escapes itself\"" "A \ escapes itself"
 run_exact_output_test "\Double qoute in double qoutes" "echo \"A \\\" inside double quotes\"" "A \" inside double quotes"
 echo "content1" > "/tmp/shell_tests/number 1"
@@ -183,6 +185,7 @@ content3'
 # ---------------------------------------------------------------------------
 #  Quoted Executable Names
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- quoted executable names --${NC}"
 mkdir -p /tmp/shell_tests/bin
 
 cat > '/tmp/shell_tests/bin/exe with "quotes"' << 'EOF'
@@ -213,6 +216,7 @@ run_output_test 'quoted executable - single quotes with embedded quotes' \
 # ---------------------------------------------------------------------------
 # Redirect - The > Operator
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- the > operator --${NC}"
 echo hello > /tmp/shell_tests/output.txt
 run_output_test "Redirect to a file" "cat /tmp/shell_tests/output.txt" "hello"
 echo hello 1> /tmp/shell_tests/output.txt
@@ -222,6 +226,7 @@ run_output_test "Error on stdout" "cat nonexistent > /tmp/shell_tests/output.txt
 # ---------------------------------------------------------------------------
 # Redirect - The 2> Operator - Errors
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- the 2> operator --${NC}"
 cat nonexistent 2> /tmp/shell_tests/output.txt
 run_output_test "Error into file" "cat /tmp/shell_tests/output.txt" "cat: nonexistent: No such file or directory"
 
@@ -233,6 +238,7 @@ run_output_test "cat error text 2> operator" "cat /tmp/shell_tests/errors.txt" "
 # ---------------------------------------------------------------------------
 # Redirect - The >> Operator
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- the >> operator --${NC}"
 echo first > /tmp/shell_tests/output.txt
 echo second >> /tmp/shell_tests/output.txt
 run_output_test "Append >> operator" "cat /tmp/shell_tests/output.txt" "first
@@ -248,6 +254,7 @@ fourth"
 # ---------------------------------------------------------------------------
 # Redirect - The 2>> Operator
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- the 2>> operator --${NC}"
 echo "" > /tmp/shell_tests/errors.txt
 cat nonexistent1 2>> /tmp/shell_tests/errors.txt
 cat nonexistent2 2>> /tmp/shell_tests/errors.txt

@@ -9,6 +9,8 @@
 
 #include <fcntl.h>
 
+#include <termios.h>
+
 #define MAX_SIZE 1024
 
 bool EchoFunction(char **args);
@@ -21,21 +23,82 @@ char** ParseInput(char *input);
 void FreeArgs(char **args);
 int CheckOutputRedirect(char **args, int *target_fd);
 void RestoreStd(int fd, int saved_std, int target_fd);
+int HandleTabCompletion(char *input, int i);
+
+struct termios orig_termios;
+bool is_interactive_global;
+
+void RestoreTerminal(void) {
+    if (is_interactive_global) {
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+    }
+}
 
 //int argc, char *argv[]
 int main() {
-  
     char input[MAX_SIZE];
+    char ch;
+
+    bool is_interactive = isatty(STDIN_FILENO); //is fd refering to terminal (tty) or something else
+    is_interactive_global = is_interactive;
+    
+    struct termios raw;
+    if (is_interactive) {
+        tcgetattr(STDIN_FILENO, &orig_termios);
+        raw = orig_termios;                       // Copy for returing terminal to canonical mode
+        raw.c_lflag &= ~(ECHO | ICANON);          // Disable Canonical Mode
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+        atexit(RestoreTerminal);    
+    }
+
   
     while(1) {
         setbuf(stdout, NULL);
         printf("$ ");
-		if (fgets(input, MAX_SIZE - 1, stdin) == NULL ) {
-            break; //EOF or error 
+
+        if(is_interactive) {
+            int i = 0;
+            ch = '\0';
+
+            while (ch != '\n') {
+                read(STDIN_FILENO, &ch, 1);
+
+                if (ch == 9) { //tab
+                    i = HandleTabCompletion(input, i);
+                    continue;
+                }
+                else if (ch == 27) {  // Start of esc sequence, cant move with arrows freely trough terminal
+                    char seq[2];
+                    read(STDIN_FILENO, &seq[0], 1);
+                    read(STDIN_FILENO, &seq[1], 1);
+                    // za sad: samo ignoriši celu sekvencu, ne radi ništa
+                    continue;
+                }
+                else if(ch == 127) { //backspace
+                    if (i > 0) {
+                        i--;
+                        input[i] = '\0';
+                        printf("\b \b");
+                        fflush(stdout); 
+                    }
+                } else {
+                    if (i < MAX_SIZE - 1) { 
+                        input[i++] = ch;
+                        input[i] = '\0';    
+                        printf("%c", ch); 
+                    }
+                }
+                //printf("%d\n", ch);
+            }
+        } else {
+            if (fgets(input, MAX_SIZE - 1, stdin) == NULL ) {
+                break; //EOF or error 
+            }
         }
-		input[strcspn(input, "\n")] = '\0';
+        input[strcspn(input, "\n")] = '\0';
 
 
+        
         //if input is blank or only spaces
         bool only_white_spaces = true;
         for (int i = 0; input[i] != '\0'; i++) {
@@ -66,7 +129,7 @@ int main() {
         FreeArgs(args); //freeing the memory from func ParseInput
     }
 
-  return 0;
+    return 0;
 }
 
 bool EchoFunction(char **args) {
@@ -122,39 +185,39 @@ bool BuiltinFunction(char **args, int fd, int target_fd) {
 
 bool TypeFunction(char *input) {
 
+    // BUILTIN
+    char *builtins[] = {"echo", "exit", "type", "pwd", "cd"};
+    int length = sizeof(builtins) / sizeof(builtins[0]);
+    
+    for(int i = 0; i < length; i++) {
+        if (strcmp(builtins[i], input) == 0) {
+            printf("%s is a shell builtin\n", input );
+            return true;
+        }
+    }
+
+        
+    // CHECKING PATH env var
     char *path_env = getenv("PATH"); // Getting PATH value (String) trough getenv func
-    //char *cmd = input + 5; //TO DO ovo ne treba
-    //cmd[strcspn(cmd, "\n")] = '\0';
+    char path_env_cpy[MAX_SIZE];
+    strcpy(path_env_cpy, path_env);
 
-    if ( strcmp(input, "type") == 0 ||
-         strcmp(input, "echo") == 0 ||
-         strcmp(input, "exit") == 0 ||
-         strcmp(input, "pwd") == 0  ||
-         strcmp(input, "cd") == 0 ) {
+    char *all_paths = strtok(path_env_cpy, ":"); 
+    
+    while(all_paths != NULL) {
+        char full_path[MAX_SIZE];
         
-        printf("%s is a shell builtin\n", input );
-        
-    } else {
-        char path_env_cpy[MAX_SIZE];
-        strcpy(path_env_cpy, path_env);
+        snprintf(full_path, sizeof(full_path), "%s/%s", all_paths, input);
 
-        char *all_paths = strtok(path_env_cpy, ":"); 
-        
-        while(all_paths != NULL) {
-            char full_path[MAX_SIZE];
-            
-            snprintf(full_path, sizeof(full_path), "%s/%s", all_paths, input);
-
-            if(access(full_path, F_OK) == 0 && access(full_path, X_OK) == 0) {
-                printf("%s is %s\n", input, full_path);
-                return true;
-            }
-
-            all_paths = strtok(NULL, ":");
+        if(access(full_path, F_OK) == 0 && access(full_path, X_OK) == 0) {
+            printf("%s is %s\n", input, full_path);
+            return true;
         }
 
-        printf("%s: not found\n", input);
-    } 
+        all_paths = strtok(NULL, ":");
+    }
+    printf("%s: not found\n", input);
+    
 
     return true;
 }
@@ -375,4 +438,42 @@ void RestoreStd(int fd, int saved_std, int target_fd) {
         close(fd);
         close(saved_std);
     }
+}
+
+int HandleTabCompletion(char *input, int i) {
+    //printf("[DEBUG input='%s' i=%d]", input, i);
+    if (i == 0) {
+        printf("\a"); //beep
+        return i;
+    }
+
+    char str_match[8];
+    int match_count = 0;
+    
+    char *builtins[] = {"echo", "exit", "type", "pwd", "cd"};
+    int length = sizeof(builtins) / sizeof(builtins[0]);
+
+    for(int j = 0; j < length; j++) {
+        if (strncmp(builtins[j], input, i) == 0) {
+            match_count++;
+            strcpy(str_match, builtins[j]);
+        }
+    }
+
+    if(match_count == 0) {
+        printf("\a"); //beep
+        return i;
+    }
+    else if (match_count == 1) {
+        strcpy(input, str_match);
+        strcat(input, " ");
+        printf("%s ", str_match + i); 
+        return strlen(input);
+    } else {
+        //printf("vise");
+        //vise ponudjenih
+        return i;
+    }
+
+    //return 0;
 }
