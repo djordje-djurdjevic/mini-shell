@@ -11,7 +11,13 @@
 
 #include <termios.h>
 
+#include <dirent.h>
+
+//#include <time.h>
+
+
 #define MAX_SIZE 1024
+#define MAX_MATCHES 64
 
 bool EchoFunction(char **args);
 bool BuiltinFunction(char **args, int fd, int target_fd);
@@ -19,11 +25,18 @@ bool TypeFunction(char *input);
 bool ProgramFunction(char **args, int fd, int target_fd);
 bool PWDFunction();
 bool CDFunction(char *input);
+
 char** ParseInput(char *input);
 void FreeArgs(char **args);
+
 int CheckOutputRedirect(char **args, int *target_fd);
 void RestoreStd(int fd, int saved_std, int target_fd);
-int HandleTabCompletion(char *input, int i);
+
+int HandleTabCompletion(char *input, int i, int tab_counter);
+void CheckBuiltinMatches(char *input, int i, char matches[][MAX_SIZE], int *match_count);
+void CheckPathMatches(char *input, int i, char matches[][MAX_SIZE], int *match_count);
+int ResolveCompletion(char *input, int i, char matches[][MAX_SIZE], int match_count, int tab_counter);
+int LongestCommonPrefix(char matches[][MAX_SIZE], int match_count);
 
 struct termios orig_termios;
 bool is_interactive_global;
@@ -59,12 +72,14 @@ int main() {
         if(is_interactive) {
             int i = 0;
             ch = '\0';
+            int tab_counter = 0;
 
             while (ch != '\n') {
                 read(STDIN_FILENO, &ch, 1);
 
                 if (ch == 9) { //tab
-                    i = HandleTabCompletion(input, i);
+                    tab_counter++;
+                    i = HandleTabCompletion(input, i, tab_counter);
                     continue;
                 }
                 else if (ch == 27) {  // Start of esc sequence, cant move with arrows freely trough terminal
@@ -79,13 +94,17 @@ int main() {
                         i--;
                         input[i] = '\0';
                         printf("\b \b");
-                        fflush(stdout); 
+                        fflush(stdout);
+
+                        tab_counter = 0;
                     }
                 } else {
                     if (i < MAX_SIZE - 1) { 
                         input[i++] = ch;
                         input[i] = '\0';    
-                        printf("%c", ch); 
+                        printf("%c", ch);
+                        
+                        tab_counter = 0;
                     }
                 }
                 //printf("%d\n", ch);
@@ -236,9 +255,10 @@ bool ProgramFunction(char **args, int fd, int target_fd) {
         }
         
         execvp(args[0], args);
+
         //if it gets here it means it failed
         close(fd);
-        exit(127);
+        _exit(127);
 
     } else {
         if (fd != -1) { close(fd); }
@@ -440,40 +460,140 @@ void RestoreStd(int fd, int saved_std, int target_fd) {
     }
 }
 
-int HandleTabCompletion(char *input, int i) {
+
+int HandleTabCompletion(char *input, int i, int tab_counter) {
     //printf("[DEBUG input='%s' i=%d]", input, i);
     if (i == 0) {
         printf("\a"); //beep
         return i;
     }
 
-    char str_match[8];
+    char matches[MAX_MATCHES][MAX_SIZE];
     int match_count = 0;
+
+    CheckBuiltinMatches(input, i, matches, &match_count);
+    if (match_count == 1) {
+        return ResolveCompletion(input, i, matches, 1, tab_counter);
+    }
+
+    
+    CheckPathMatches(input, i, matches, &match_count);
+    
+
+    //printf("[DEBUG match_count='%d' ]", match_count);
+    return ResolveCompletion(input, i, matches, match_count, tab_counter);
+
+}
+
+void CheckBuiltinMatches(char *input, int i, char matches[][MAX_SIZE], int *match_count) {
     
     char *builtins[] = {"echo", "exit", "type", "pwd", "cd"};
     int length = sizeof(builtins) / sizeof(builtins[0]);
 
     for(int j = 0; j < length; j++) {
         if (strncmp(builtins[j], input, i) == 0) {
-            match_count++;
-            strcpy(str_match, builtins[j]);
+            strcpy(matches[*match_count], builtins[j]);
+            (*match_count)++;
         }
     }
+}
 
+void CheckPathMatches(char *input, int i, char matches[][MAX_SIZE], int *match_count) {
+    
+    char *path_env = getenv("PATH"); // Getting PATH value (String) trough getenv func
+    char path_env_cpy[MAX_SIZE];
+    strcpy(path_env_cpy, path_env);
+
+    char *all_paths = strtok(path_env_cpy, ":"); 
+    char full_path[MAX_SIZE];
+
+    while(all_paths != NULL) {
+        DIR *dir = opendir(all_paths);
+        if (dir != NULL) {
+            struct dirent *entry;
+
+            while ((entry = readdir(dir)) != NULL) {
+
+                if (strncmp(entry->d_name, input, i) == 0) {
+                    
+                    snprintf(full_path, sizeof(full_path), "%s/%s", all_paths, entry->d_name);
+
+                    if(access(full_path, F_OK) == 0 && access(full_path, X_OK) == 0) {
+                        
+                        bool already_seen = false;
+                        for (int k = 0; k < *match_count; k++) {
+                            if (strcmp(matches[k], entry->d_name) == 0) {
+                                //printf("[DEDUP HIT: %s already at index %d]", entry->d_name, k);
+                                already_seen = true;
+                                break;
+                            }
+                        }
+
+                        if(!already_seen && *match_count < MAX_MATCHES) {
+                            strcpy(matches[*match_count], entry->d_name);
+                            (*match_count)++;
+                            
+                        }
+
+                    }
+                }
+            }
+            
+            closedir(dir);
+        }
+
+        all_paths = strtok(NULL, ":");
+    }
+}
+
+int ResolveCompletion(char *input, int i, char matches[][MAX_SIZE], int match_count, int tab_counter) {
+    
     if(match_count == 0) {
         printf("\a"); //beep
         return i;
     }
     else if (match_count == 1) {
-        strcpy(input, str_match);
+        strcpy(input, matches[0]);
         strcat(input, " ");
-        printf("%s ", str_match + i); 
+        printf("%s ", matches[0] + i); 
         return strlen(input);
+    
     } else {
-        //printf("vise");
-        //vise ponudjenih
+        
+        if (tab_counter % 2 == 0) {
+            printf("\n");
+            for(int k = 0; k < match_count; k++) {
+                printf("%s  ", matches[k]);
+            }
+            printf("\n$ %s", input);
+
+        } else {
+            int ii = LongestCommonPrefix(matches, match_count);
+            strcpy(input, matches[0]);
+            printf("%s", matches[0] + i); 
+
+            return ii;
+        }
+
         return i;
     }
+}
 
-    //return 0;
+int LongestCommonPrefix(char matches[][MAX_SIZE], int match_count) {
+    char LCP[MAX_SIZE];
+    strcpy(LCP, matches[0]); // start with first candidate 
+
+    for(int k = 1; k < match_count; k++) {
+        
+        int j = 0;
+        while (LCP[j] != '\0' && matches[k][j] != '\0' && LCP[j] == matches[k][j]) {
+            j++;
+        }
+        
+        LCP[j] = '\0';
+        
+    }
+    
+    strcpy(matches[0], LCP);
+    return strlen(LCP);
 }

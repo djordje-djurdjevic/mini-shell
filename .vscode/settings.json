@@ -1,3 +1,5 @@
 {
-  "terminal.integrated.enableBell": true
+  "terminal.integrated.enableVisualBell": true,
+  "accessibility.signals.terminalBell": true
 }
+  
