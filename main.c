@@ -31,9 +31,13 @@ void restore_std(int fd, int saved_std, int target_fd);
 
 int handle_tab_completion(char *input, int i, int tab_counter);
 void check_builtin_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count);
-void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count);
-int resolve_completion(char *input, int i, char matches[][MAX_SIZE], int match_count, int tab_counter);
+void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count, char *dir_path, bool require_exec);
+int resolve_completion(char *input, int i, int return_poschar, char matches[][MAX_SIZE], int match_count, int tab_counter);
 int longest_common_prefix(char matches[][MAX_SIZE], int match_count);
+
+char *get_file_completion_prefix(const char *input, int *cursor_pos);
+bool is_first_token(const char *input, int cursor_pos);
+
 
 struct termios orig_termios;
 bool is_interactive_global;
@@ -80,10 +84,11 @@ int main()
             {
                 read(STDIN_FILENO, &ch, 1);
 
-                if (ch == 9)
-                { // tab
+                if (ch == 9)    // tab
+                {
                     tab_counter++;
                     i = handle_tab_completion(input, i, tab_counter);
+                   
                     continue;
                 }
                 else if (ch == 27)
@@ -588,16 +593,35 @@ int handle_tab_completion(char *input, int i, int tab_counter)
     char matches[MAX_MATCHES][MAX_SIZE];
     int match_count = 0;
 
-    check_builtin_matches(input, i, matches, &match_count);
-    if (match_count == 1)
-    {
-        return resolve_completion(input, i, matches, 1, tab_counter);
+    if(i == 0 || is_first_token(input, i)) {
+
+        check_builtin_matches(input, i, matches, &match_count);
+        if (match_count == 1) {
+            return resolve_completion(input, 0, i, matches, 1, tab_counter); //edge case starting with spaces
+        } else {
+
+            check_path_matches(input, i, matches, &match_count, getenv("PATH"), true);
+            return resolve_completion(input, 0, i, matches, match_count, tab_counter);
+        }
+    } else {
+        //printf("DEBUG: enter else branch");
+        int prefix_i = i;                       // length of last arg (prefix)
+        char *last_arg = get_file_completion_prefix(input, &prefix_i);
+        
+        //printf("[DEBUG last_arg='%s' i_copy=%d]\n", last_arg, i_copy);
+        char *cwd = getcwd(NULL, 0);        
+        check_path_matches(last_arg, prefix_i, matches, &match_count, cwd, false);
+        
+        //printf("[DEBUG match_count='%d' ]", match_count);
+        int real_start = i - prefix_i;          // pocetna pozicija u bufferu
+
+        free(last_arg);
+        free(cwd);
+
+        return resolve_completion(input, real_start, prefix_i, matches, match_count, tab_counter);
+
     }
-
-    check_path_matches(input, i, matches, &match_count);
-
     // printf("[DEBUG match_count='%d' ]", match_count);
-    return resolve_completion(input, i, matches, match_count, tab_counter);
 }
 
 void check_builtin_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count)
@@ -616,14 +640,14 @@ void check_builtin_matches(char *input, int i, char matches[][MAX_SIZE], int *ma
     }
 }
 
-void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count)
+void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count, char *dir_path, bool require_exec)
 {
 
-    char *path_env = getenv("PATH"); // Getting PATH value (String) trough getenv func
-    char path_env_cpy[MAX_SIZE];
-    strcpy(path_env_cpy, path_env);
+    char path_cpy[MAX_SIZE]; // Getting PATH value (String) trough getenv func
+    strncpy(path_cpy, dir_path, sizeof(path_cpy) - 1);
+    path_cpy[sizeof(path_cpy) - 1] = '\0';
 
-    char *all_paths = strtok(path_env_cpy, ":");
+    char *all_paths = strtok(path_cpy, ":");
     char full_path[MAX_SIZE];
 
     while (all_paths != NULL)
@@ -641,7 +665,11 @@ void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match
 
                     snprintf(full_path, sizeof(full_path), "%s/%s", all_paths, entry->d_name);
 
-                    if (access(full_path, F_OK) == 0 && access(full_path, X_OK) == 0)
+                    bool ok = require_exec
+                    ? (access(full_path, F_OK) == 0 && access(full_path, X_OK) == 0)
+                    : (access(full_path, F_OK) == 0);
+
+                    if (ok)
                     {
 
                         bool already_seen = false;
@@ -649,7 +677,7 @@ void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match
                         {
                             if (strcmp(matches[k], entry->d_name) == 0)
                             {
-                                // printf("[DEDUP HIT: %s already at index %d]", entry->d_name, k);
+                                //printf("[DEDUP HIT: %s already at index %d]", entry->d_name, k);
                                 already_seen = true;
                                 break;
                             }
@@ -671,19 +699,20 @@ void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match
     }
 }
 
-int resolve_completion(char *input, int i, char matches[][MAX_SIZE], int match_count, int tab_counter)
+int resolve_completion(char *input, int start_idx, int prefix_len, char matches[][MAX_SIZE], int match_count, int tab_counter)
 {
 
     if (match_count == 0)
     {
         printf("\a"); // beep
-        return i;
+        return start_idx + prefix_len;
     }
     else if (match_count == 1)
     {
-        strcpy(input, matches[0]);
+        input[start_idx] = '\0';
+        strcat(input, matches[0]);
         strcat(input, " ");
-        printf("%s ", matches[0] + i);
+        printf("%s ", matches[0] + prefix_len);
         return strlen(input);
     }
     else
@@ -701,13 +730,14 @@ int resolve_completion(char *input, int i, char matches[][MAX_SIZE], int match_c
         else
         {
             int new_i = longest_common_prefix(matches, match_count);
-            strcpy(input, matches[0]);
-            printf("%s", matches[0] + i);
+            input[start_idx] = '\0';
+            strcat(input, matches[0]);
+            printf("%s", matches[0] + prefix_len);
 
-            return new_i;
+            return start_idx + new_i;
         }
 
-        return i;
+        return start_idx + prefix_len;
     }
 }
 
@@ -730,4 +760,32 @@ int longest_common_prefix(char matches[][MAX_SIZE], int match_count)
 
     strcpy(matches[0], lcp);
     return strlen(lcp);
+}
+
+char *get_file_completion_prefix(const char *input, int *cursor_pos) {
+    int  i = *cursor_pos;
+
+    while(i > 0 && input[i- 1] != ' ') {
+        i--;
+    }
+
+    int prefix_len = (*cursor_pos) - i; 
+    *cursor_pos = prefix_len;  
+
+    return strndup(input + i, prefix_len);
+}
+
+bool is_first_token(const char *input, int cursor_pos) {
+    int i = cursor_pos;
+    // pomeri se do pocetka trenutne reci (isti loop kao get_completion_prefix)
+    while (i > 0 && input[i - 1] != ' ') {
+        i--;
+    }
+    // sad proveri ima li ijedan ne-space karakter pre pozicije i
+    for (int j = 0; j < i; j++) {
+        if (input[j] != ' ') {
+            return false; // nasao je nesto pre - nije prva rec
+        }
+    }
+    return true; // sve pre pocetka trenutne reci su spaceovi (ili je i == 0)
 }
