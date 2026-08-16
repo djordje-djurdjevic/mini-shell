@@ -32,20 +32,56 @@ int handle_tab_completion(char *input, int i, int tab_counter)
     } else {
         //printf("DEBUG: enter else branch");
         int prefix_i = i;                       // length of last arg (prefix)
-        char *last_arg = get_file_completion_prefix(input, &prefix_i);
+        char *last_arg = get_last_arg(input, &prefix_i);
         
-        //printf("[DEBUG last_arg='%s' i_copy=%d]\n", last_arg, i_copy);
-        char *cwd = getcwd(NULL, 0);        
-        check_path_matches(last_arg, prefix_i, matches, &match_count, cwd, false);
-        
-        //printf("[DEBUG match_count='%d' ]", match_count);
-        int real_start = i - prefix_i;          // starting pos in buffer
+        char *last_slash = strrchr(last_arg, '/');
 
-        free(last_arg);
-        free(cwd);
+        if (last_slash != NULL ) { //nested file
+            int dirlen = last_slash - last_arg + 1;
 
-        return resolve_completion(input, real_start, prefix_i, matches, match_count, tab_counter);
+            char dir_part[MAX_SIZE];
+            strncpy(dir_part, last_arg, dirlen);
+            dir_part[dirlen] = '\0'; 
 
+            char *file_prefix = last_arg + dirlen;
+            int real_start_file = strlen(file_prefix);
+
+            char full_dir[MAX_SIZE];
+            char *cwd = getcwd(NULL, 0);
+            strcpy(full_dir, cwd);
+            strcat(full_dir, "/");
+            strcat(full_dir, dir_part);
+
+            check_path_matches(file_prefix, real_start_file, matches, &match_count, full_dir, false);
+
+            free(last_arg);
+            free(cwd);
+
+            int real_start = i - prefix_i;  // starting pos in buffer
+
+            for (int k = 0; k < match_count; k++) {
+                char temp_matches[MAX_SIZE];
+                strcpy(temp_matches, dir_part);
+                strcat(temp_matches, matches[k]);
+                strcpy(matches[k], temp_matches);
+            }
+
+
+            return resolve_completion(input, real_start, prefix_i, matches, match_count, tab_counter);
+
+        } else { //no nested file
+            //printf("[DEBUG last_arg='%s' i_copy=%d]\n", last_arg, i_copy);
+            char *cwd = getcwd(NULL, 0);        
+            check_path_matches(last_arg, prefix_i, matches, &match_count, cwd, false);
+            
+            //printf("[DEBUG match_count='%d' ]", match_count);
+            int real_start = i - prefix_i;          // starting pos in buffer
+
+            free(last_arg);
+            free(cwd);
+
+            return resolve_completion(input, real_start, prefix_i, matches, match_count, tab_counter);
+        }
     }
     // printf("[DEBUG match_count='%d' ]", match_count);
 }
@@ -188,7 +224,7 @@ int longest_common_prefix(char matches[][MAX_SIZE], int match_count)
     return strlen(lcp);
 }
 
-char *get_file_completion_prefix(const char *input, int *cursor_pos) {
+char *get_last_arg(const char *input, int *cursor_pos) {
     int  i = *cursor_pos;
 
     while(i > 0 && input[i- 1] != ' ') {
