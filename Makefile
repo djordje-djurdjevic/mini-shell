@@ -1,17 +1,17 @@
-CC := gcc
-CFLAGS := -Wall -Wextra -g
-TARGET := shell
-SRCS := $(wildcard *.c)
+CC = gcc
+CFLAGS = -Wall -Wextra -g -Iinclude
+TARGET = shell
+SRCS = $(wildcard src/*.c)
+OBJS = $(SRCS:.c=.o)
 
-.PHONY: all clean run
 
-all: $(TARGET)
-
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(SRCS)
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
 
 run: $(TARGET)
 	./$(TARGET)
 
 clean:
-	rm -f $(TARGET)
+	rm -f src/*.o $(TARGET)
+
+.PHONY: run clean
