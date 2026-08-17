@@ -3,10 +3,10 @@
 
 #include "common.h"
 
-int handle_tab_completion(char *input, int i, int tab_counter);
+int handle_tab_completion(char *input, int i, int *tab_counter);
 void check_builtin_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count);
 void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count, char *dir_path, bool require_exec);
-int resolve_completion(char *input, int start_idx, int prefix_len, char matches[][MAX_SIZE], int match_count, int tab_counter);
+int resolve_completion(char *input, int start_idx, int prefix_len, char matches[][MAX_SIZE], int match_count, int *tab_counter);
 int longest_common_prefix(char matches[][MAX_SIZE], int match_count);
 
 char *get_last_arg(const char *input, int *cursor_pos);

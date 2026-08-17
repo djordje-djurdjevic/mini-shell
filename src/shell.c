@@ -59,7 +59,7 @@ int main() {
                 if (ch == 9)    // tab
                 {
                     tab_counter++;
-                    i = handle_tab_completion(input, i, tab_counter);
+                    i = handle_tab_completion(input, i, &tab_counter);
                    
                     continue;
                 }

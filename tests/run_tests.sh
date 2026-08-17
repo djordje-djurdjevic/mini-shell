@@ -173,7 +173,7 @@ content3"
 # ---------------------------------------------------------------------------
 echo -e "${BOLD}-- backslash in double qoutes --${NC}"
 run_exact_output_test "escape backslash in \"\"" "echo \"A \\ escapes itself\"" "A \ escapes itself"
-run_exact_output_test "\Double qoute in double qoutes" "echo \"A \\\" inside double quotes\"" "A \" inside double quotes"
+run_exact_output_test "Double qoute in double qoutes" "echo \"A \\\" inside double quotes\"" "A \" inside double quotes"
 echo "content1" > "/tmp/shell_tests/number 1"
 echo "content2" > '/tmp/shell_tests/doublequote " 2'
 echo "content3" > '/tmp/shell_tests/backslash \ 3'

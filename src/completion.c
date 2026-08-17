@@ -3,12 +3,12 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <sys/stat.h>
 
 #include "common.h"
 #include "completion.h"
 
-int handle_tab_completion(char *input, int i, int tab_counter)
+int handle_tab_completion(char *input, int i, int *tab_counter)
 {
     // printf("[DEBUG input='%s' i=%d]", input, i);
     if (i == 0) {
@@ -122,6 +122,10 @@ void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match
             while ((entry = readdir(dir)) != NULL)
             {
 
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                    continue;
+                }
+
                 if (strncmp(entry->d_name, input, i) == 0)
                 {
 
@@ -145,9 +149,20 @@ void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match
                             }
                         }
 
+                        struct stat st;
+
+
                         if (!already_seen && *match_count < MAX_MATCHES)
                         {
-                            strcpy(matches[*match_count], entry->d_name);
+                            if(stat(full_path, &st) == 0 && S_ISDIR(st.st_mode)) //is dir?
+                            {
+                                strcpy(matches[*match_count], entry->d_name);
+                                strcat(matches[*match_count], "/");
+                            } 
+                            else 
+                            {
+                                strcpy(matches[*match_count], entry->d_name);
+                            } 
                             (*match_count)++;
                         }
                     }
@@ -161,7 +176,7 @@ void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match
     }
 }
 
-int resolve_completion(char *input, int start_idx, int prefix_len, char matches[][MAX_SIZE], int match_count, int tab_counter)
+int resolve_completion(char *input, int start_idx, int prefix_len, char matches[][MAX_SIZE], int match_count, int *tab_counter)
 {
 
     if (match_count == 0)
@@ -170,17 +185,38 @@ int resolve_completion(char *input, int start_idx, int prefix_len, char matches[
         return start_idx + prefix_len;
     }
     else if (match_count == 1)
-    {
+    {   
         input[start_idx] = '\0';
-        strcat(input, matches[0]);
-        strcat(input, " ");
-        printf("%s ", matches[0] + prefix_len);
+
+        if(matches[0][strlen(matches[0]) - 1] == '/') //directory
+        {
+            strcat(input, matches[0]);
+            printf("%s", matches[0] + prefix_len);
+        }
+        else
+        {
+            strcat(input, matches[0]);
+            strcat(input, " ");
+            printf("%s ", matches[0] + prefix_len);
+        }
+
+        (*tab_counter) = 0; 
         return strlen(input);
     }
     else
-    {
+    {   
+        int lcp_len = longest_common_prefix(matches, match_count);
+        if (lcp_len != prefix_len) // lcp exists 
+        {
+            strncat(input, matches[0] + prefix_len, lcp_len - prefix_len);
+            printf("%.*s", lcp_len - prefix_len, matches[0] + prefix_len);
 
-        if (tab_counter % 2 == 0)
+            (*tab_counter) = 0;
+            return start_idx + lcp_len;
+        }
+         
+
+        if ( (*tab_counter) > 1)
         {
             printf("\n");
             for (int k = 0; k < match_count; k++)
@@ -191,12 +227,7 @@ int resolve_completion(char *input, int start_idx, int prefix_len, char matches[
         }
         else
         {
-            int new_i = longest_common_prefix(matches, match_count);
-            input[start_idx] = '\0';
-            strcat(input, matches[0]);
-            printf("%s", matches[0] + prefix_len);
-
-            return start_idx + new_i;
+            printf("\a"); // beep
         }
 
         return start_idx + prefix_len;
@@ -220,7 +251,7 @@ int longest_common_prefix(char matches[][MAX_SIZE], int match_count)
         lcp[j] = '\0';
     }
 
-    strcpy(matches[0], lcp);
+    //strcpy(matches[0], lcp);
     return strlen(lcp);
 }
 
