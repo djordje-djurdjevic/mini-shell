@@ -286,3 +286,4 @@ if [ "$FAILED_TESTS" -gt 0 ]; then
 fi
 echo -e "${GREEN}${BOLD}ALL TESTS PASSED (${TOTAL_TESTS}/${TOTAL_TESTS})${NC}"
 exit 0
+exit

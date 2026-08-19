@@ -3,10 +3,18 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 #include "redirect.h"
 #include "common.h"
 #include "builtins.h"
+
+const char *BUILTINS[] = {"echo", "exit", "type", "pwd", "cd", "complete"};
+const int BUILTINS_COUNT = sizeof(BUILTINS) / sizeof(BUILTINS[0]);
+
+
+#define MAX_COMPLETIONS 32
+char registered_commands[MAX_COMPLETIONS][MAX_SIZE];
+char registered_paths[MAX_COMPLETIONS][MAX_SIZE];
+int registered_count = 0;
 
 bool echo(char **args)
 {
@@ -26,11 +34,15 @@ bool echo(char **args)
 bool run_builtin(char **args, int fd, int target_fd)
 {
 
-    bool is_builtin = (strcmp(args[0], "exit") == 0 ||
-                       strcmp(args[0], "echo") == 0 ||
-                       strcmp(args[0], "type") == 0 ||
-                       strcmp(args[0], "pwd") == 0 ||
-                       strcmp(args[0], "cd") == 0);
+    bool is_builtin = false;
+    for(int i = 0; i < BUILTINS_COUNT; i++) 
+    {
+        if (strcmp(args[0], BUILTINS[i]) == 0) 
+        {
+            is_builtin = true;
+            break;
+        }
+    }
 
     if (!is_builtin)
     {
@@ -46,6 +58,8 @@ bool run_builtin(char **args, int fd, int target_fd)
         dup2(fd, target_fd);        
     }
 
+
+    //typedef bool (*builtin_fn)(char **args);
     if (strcmp(args[0], "exit") == 0)
     {
         exit(0);
@@ -66,6 +80,10 @@ bool run_builtin(char **args, int fd, int target_fd)
     {
         result = cd(args[1]);
     }
+    else if (strcmp(args[0], "complete") == 0)
+    {
+        result = complete(args);
+    }
 
     restore_std(fd, saved_std, target_fd);
     return result;
@@ -80,12 +98,9 @@ bool type(char *input)
     }
 
     // BUILTIN
-    char *builtins[] = {"echo", "exit", "type", "pwd", "cd"};
-    int length = sizeof(builtins) / sizeof(builtins[0]);
-
-    for (int i = 0; i < length; i++)
+    for (int i = 0; i < BUILTINS_COUNT; i++)
     {
-        if (strcmp(builtins[i], input) == 0)
+        if (strcmp(input, BUILTINS[i]) == 0)
         {
             printf("%s is a shell builtin\n", input);
             return true;
@@ -154,6 +169,58 @@ bool cd(char *input)
     else
     {
         fprintf(stderr, "cd: %s: No such file or directory\n", input);
+    }
+
+    return true;
+}
+
+bool complete(char **args) {
+
+    if(args[1] == NULL) 
+    {
+        return true;
+    }
+
+
+    if(strcmp(args[1], "-p") == 0)
+    {   
+        if(args[2] == NULL) 
+        {
+            return true;
+        }
+       
+        for (int i = 0; i < registered_count; i++) 
+        {
+            if (strcmp(args[2], registered_commands[i]) == 0)
+            {
+
+                printf("complete -C '%s' %s\n", registered_paths[i], registered_commands[i]);
+                return true;               
+            }
+        }
+
+        printf("complete: %s: no completion specification\n", args[2]);
+        return true;
+    }
+    else if (strcmp(args[1], "-C") == 0) 
+    {   
+        if(args[2] == NULL || args[3] == NULL) 
+        {
+            return true;
+        }
+
+        for (int i = 0; i < registered_count; i++) 
+        {
+            if (strcmp(args[3], registered_commands[i]) == 0)
+            {
+                strcpy(registered_paths[i], args[2]); //update
+                //strcpy(registered_commands[i], args[3]);      
+                return true;  
+            }
+        }   
+        strcpy(registered_paths[registered_count], args[2]);
+        strcpy(registered_commands[registered_count], args[3]);
+        registered_count++;
     }
 
     return true;

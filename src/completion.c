@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "completion.h"
+#include "builtins.h"
 
 int handle_tab_completion(char *input, int i, int *tab_counter)
 {
@@ -89,14 +90,13 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
 void check_builtin_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count)
 {
 
-    char *builtins[] = {"echo", "exit", "type", "pwd", "cd"};
-    int length = sizeof(builtins) / sizeof(builtins[0]);
+    
 
-    for (int j = 0; j < length; j++)
+    for (int j = 0; j < BUILTINS_COUNT; j++)
     {
-        if (strncmp(builtins[j], input, i) == 0)
+        if (strncmp(input, BUILTINS[j], i) == 0)
         {
-            strcpy(matches[*match_count], builtins[j]);
+            strcpy(matches[*match_count], BUILTINS[j]);
             (*match_count)++;
         }
     }
@@ -149,8 +149,8 @@ void check_path_matches(char *input, int i, char matches[][MAX_SIZE], int *match
                             }
                         }
 
-                        struct stat st;
 
+                        struct stat st;
 
                         if (!already_seen && *match_count < MAX_MATCHES)
                         {
