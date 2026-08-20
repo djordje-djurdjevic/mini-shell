@@ -32,10 +32,15 @@ make run
 ```
 
 $ echo hello world
+
 hello world
+
 $ type echo
+
 echo is a shell builtin
+
 $ ls > out.txt
+
 $ cat out.txt
 
 ## Known limitations / roadmap
