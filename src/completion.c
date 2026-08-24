@@ -4,21 +4,39 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 
 #include "common.h"
 #include "completion.h"
 #include "builtins.h"
+#include "parser.h"
+
 
 int handle_tab_completion(char *input, int i, int *tab_counter)
 {
-    // printf("[DEBUG input='%s' i=%d]", input, i);
+    //printf("[DEBUG input='%s' i=%d]", input, i);
     if (i == 0) {
         printf("\a"); // beep
         return i;
     }
 
     char matches[MAX_MATCHES][MAX_SIZE];
+    matches[0][0] = '\0';
     int match_count = 0;
+
+    if(check_completer(input, matches)) 
+    {   
+        //printf("DEBUG: Entered check completer");
+        //printf("\nDEBUG BEFORE: input='%s' i=%d\n", input, i);
+        // printf("DEBUG MATCH: '%s'\n", matches[0]);
+        if (strcmp(matches[0], "") == 0) {
+            printf("\a"); // beep
+            return i;
+        }
+
+        //printf("DEBUG: %s", matches[0]);
+        return resolve_completion(input, i, 0, matches, 1, tab_counter);
+    }
 
     if(i == 0 || is_first_token(input, i)) {
 
@@ -89,9 +107,6 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
 
 void check_builtin_matches(char *input, int i, char matches[][MAX_SIZE], int *match_count)
 {
-
-    
-
     for (int j = 0; j < BUILTINS_COUNT; j++)
     {
         if (strncmp(input, BUILTINS[j], i) == 0)
@@ -186,19 +201,22 @@ int resolve_completion(char *input, int start_idx, int prefix_len, char matches[
     }
     else if (match_count == 1)
     {   
-        input[start_idx] = '\0';
+        strcpy(input + start_idx, matches[0]);
 
         if(matches[0][strlen(matches[0]) - 1] == '/') //directory
         {
-            strcat(input, matches[0]);
             printf("%s", matches[0] + prefix_len);
         }
         else
         {
-            strcat(input, matches[0]);
             strcat(input, " ");
             printf("%s ", matches[0] + prefix_len);
         }
+
+        // printf("\nDEBUG input='%s' len=%zu return=%zu\n",
+        // input,
+        // strlen(input),
+        // strlen(input));
 
         (*tab_counter) = 0; 
         return strlen(input);
@@ -281,4 +299,88 @@ bool is_first_token(const char *input, int cursor_pos) {
         }
     }
     return true; //it is first token
+}
+
+bool check_completer(char *input, char matches[][MAX_SIZE]) {
+
+    //printf("[DEBUG registered_count=%d]\n", registered_count);
+
+    char **args = parse_input(input);
+    int args_count = 0;
+    while (args[args_count] != NULL) args_count++;
+
+    for (int i = 0; i < registered_count; i++) 
+    {
+        //printf("[DEBUG comparing input='%s' vs registered='%s']\n", input, registered_commands[i]);
+        if (strcmp(args[0], registered_commands[i]) == 0)
+        {
+            int fd[2];
+            pipe(fd); 
+
+            pid_t pid = fork();
+
+            if (pid == -1) 
+            {
+                close(fd[0]);
+                close(fd[1]);
+                printf("fork error");
+            }
+            else if(pid == 0) 
+            {
+                char *prev_word    = (args_count >= 2) ? args[args_count - 2] : ""; //git remote set
+                char *current_word = (args_count >= 1) ? args[args_count - 1] : "";
+
+                char *completer_args[5];
+                completer_args[0] = registered_paths[i]; //git remote set
+                completer_args[1] = args[0];
+                completer_args[2] = current_word;
+                completer_args[3] = prev_word;
+                completer_args[4] = NULL;
+
+                dup2(fd[1], STDOUT_FILENO);
+                execvp(completer_args[0], completer_args);
+                //perror("execvp failed");   
+
+                close(fd[0]);
+                close(fd[1]);
+                free(args);
+
+                _exit(127);
+            }
+            else 
+            {
+                close(fd[1]);
+
+                int status;
+                wait(&status);
+
+                if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
+                {
+                    //printf("DEBUG: FALSE");
+                    free(args);
+                    return false;
+                }
+
+                char buffer[MAX_SIZE];
+                int bytes_read = read(fd[0], buffer, sizeof(buffer) - 1);
+                //printf("[DEBUG bytes_read=%d buffer='%s']\n", bytes_read, buffer);
+                if (bytes_read > 0) 
+                {
+                    buffer[bytes_read] = '\0';
+                    //#pragma GCC diagnostic push
+                    //#pragma GCC diagnostic ignored "-Wformat-truncation"
+                    snprintf(matches[0], MAX_SIZE, "%s", buffer);
+                    //#pragma GCC diagnostic pop
+                }
+                
+                close(fd[0]);
+                free(args);
+
+                return true;
+                //resolve_completion(NULL, 0, 0, matches, 1, 0);
+            }
+        }
+    }
+
+    return false;
 }

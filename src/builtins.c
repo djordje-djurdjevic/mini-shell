@@ -6,10 +6,11 @@
 #include "redirect.h"
 #include "common.h"
 #include "builtins.h"
+#include "completion.h"
+
 
 const char *BUILTINS[] = {"echo", "exit", "type", "pwd", "cd", "complete"};
 const int BUILTINS_COUNT = sizeof(BUILTINS) / sizeof(BUILTINS[0]);
-
 
 #define MAX_COMPLETIONS 32
 char registered_commands[MAX_COMPLETIONS][MAX_SIZE];
@@ -193,9 +194,8 @@ bool complete(char **args) {
         {
             if (strcmp(args[2], registered_commands[i]) == 0)
             {
-
                 printf("complete -C '%s' %s\n", registered_paths[i], registered_commands[i]);
-                return true;               
+                return true;
             }
         }
 
@@ -214,7 +214,7 @@ bool complete(char **args) {
             if (strcmp(args[3], registered_commands[i]) == 0)
             {
                 strcpy(registered_paths[i], args[2]); //update
-                //strcpy(registered_commands[i], args[3]);      
+                //strcpy(registered_commands[i], args[3]);   not necessesary   
                 return true;  
             }
         }   
