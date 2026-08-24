@@ -327,6 +327,13 @@ bool check_completer(char *input, char matches[][MAX_SIZE]) {
             }
             else if(pid == 0) 
             {
+                setenv("COMP_LINE", input, 1);
+
+                char comp_point_str[16];
+                snprintf(comp_point_str, sizeof(comp_point_str), "%d", (int)strlen(input));
+                setenv("COMP_POINT", comp_point_str, 1);
+
+
                 char *prev_word    = (args_count >= 2) ? args[args_count - 2] : ""; //git remote set
                 char *current_word = (args_count >= 1) ? args[args_count - 1] : "";
 
