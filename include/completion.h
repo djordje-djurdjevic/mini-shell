@@ -12,6 +12,7 @@ int longest_common_prefix(char matches[][MAX_SIZE], int match_count);
 char *get_last_arg(const char *input, int *cursor_pos);
 bool is_first_token(const char *input, int cursor_pos);
 
-bool check_completer(char *input, char matches[][MAX_SIZE]);
+bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count);
+int compare_strings(const void *a, const void *b);
 
 #endif

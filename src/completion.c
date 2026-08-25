@@ -24,18 +24,16 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
     matches[0][0] = '\0';
     int match_count = 0;
 
-    if(check_completer(input, matches)) 
+    if(check_completer(input, matches, &match_count)) 
     {   
-        //printf("DEBUG: Entered check completer");
-        //printf("\nDEBUG BEFORE: input='%s' i=%d\n", input, i);
-        // printf("DEBUG MATCH: '%s'\n", matches[0]);
+        // printf("DEBUG: Entered check completer");
+        // printf("\nDEBUG BEFORE: input='%s' i=%d\n", input, i);
         if (strcmp(matches[0], "") == 0) {
             printf("\a"); // beep
             return i;
         }
-
         //printf("DEBUG: %s", matches[0]);
-        return resolve_completion(input, i, 0, matches, 1, tab_counter);
+        return resolve_completion(input, i, 0, matches, match_count, tab_counter);
     }
 
     if(i == 0 || is_first_token(input, i)) {
@@ -231,11 +229,12 @@ int resolve_completion(char *input, int start_idx, int prefix_len, char matches[
 
             (*tab_counter) = 0;
             return start_idx + lcp_len;
-        }
-         
+        } 
 
         if ( (*tab_counter) > 1)
         {
+            qsort(matches, match_count, MAX_SIZE, compare_strings);
+
             printf("\n");
             for (int k = 0; k < match_count; k++)
             {
@@ -301,7 +300,7 @@ bool is_first_token(const char *input, int cursor_pos) {
     return true; //it is first token
 }
 
-bool check_completer(char *input, char matches[][MAX_SIZE]) {
+bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
 
     //printf("[DEBUG registered_count=%d]\n", registered_count);
 
@@ -346,7 +345,7 @@ bool check_completer(char *input, char matches[][MAX_SIZE]) {
 
                 dup2(fd[1], STDOUT_FILENO);
                 execvp(completer_args[0], completer_args);
-                //perror("execvp failed");   
+                perror("execvp failed");   
 
                 close(fd[0]);
                 close(fd[1]);
@@ -370,14 +369,22 @@ bool check_completer(char *input, char matches[][MAX_SIZE]) {
 
                 char buffer[MAX_SIZE];
                 int bytes_read = read(fd[0], buffer, sizeof(buffer) - 1);
+
+                
                 //printf("[DEBUG bytes_read=%d buffer='%s']\n", bytes_read, buffer);
                 if (bytes_read > 0) 
                 {
                     buffer[bytes_read] = '\0';
-                    //#pragma GCC diagnostic push
-                    //#pragma GCC diagnostic ignored "-Wformat-truncation"
-                    snprintf(matches[0], MAX_SIZE, "%s", buffer);
-                    //#pragma GCC diagnostic pop
+                    char *buffer_cpy = strtok(buffer, "\n");
+                    int j = 0;
+                    
+                    while (buffer_cpy != NULL) 
+                    {
+                        snprintf(matches[j], MAX_SIZE, "%s", buffer_cpy);
+                        j++;
+                        buffer_cpy = strtok(NULL, "\n");
+                    }
+                    *match_count = j;               
                 }
                 
                 close(fd[0]);
@@ -390,4 +397,9 @@ bool check_completer(char *input, char matches[][MAX_SIZE]) {
     }
 
     return false;
+}
+
+int compare_strings(const void *a, const void *b) 
+{
+    return strcmp((const char*)a, (const char*)b);
 }
