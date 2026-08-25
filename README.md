@@ -19,7 +19,6 @@ A custom Unix shell implemented in C, built from scratch on top of raw POSIX sys
 
 ```sh
 make
-make all
 ```
 
 No external dependencies beyond the standard C library and POSIX headers (`unistd.h`, `termios.h`, `dirent.h`, `fcntl.h`, `sys/wait.h`).
