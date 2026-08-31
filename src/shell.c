@@ -144,7 +144,7 @@ int main() {
             continue;
         }
 
-        printf("%s: command not found\n", args[0]);
+        printf("%s: command not found\n", input);
 
         if (fd != -1) 
         {

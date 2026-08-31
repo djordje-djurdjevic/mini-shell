@@ -32,8 +32,21 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
             printf("\a"); // beep
             return i;
         }
+
         //printf("DEBUG: %s", matches[0]);
-        return resolve_completion(input, i, 0, matches, match_count, tab_counter);
+        if (is_first_token(input, i)) 
+        {
+            return resolve_completion(input, i, 0, matches, match_count, tab_counter);
+        }
+        else 
+        {
+            int prefix_i = i;
+            char *last_arg = get_last_arg(input, &prefix_i);
+            free(last_arg);
+            int real_start = i - prefix_i;
+
+            return resolve_completion(input, real_start, prefix_i, matches, match_count, tab_counter);
+        }
     }
 
     if(i == 0 || is_first_token(input, i)) {
@@ -221,15 +234,21 @@ int resolve_completion(char *input, int start_idx, int prefix_len, char matches[
     }
     else
     {   
-        int lcp_len = longest_common_prefix(matches, match_count);
-        if (lcp_len != prefix_len) // lcp exists 
-        {
-            strncat(input, matches[0] + prefix_len, lcp_len - prefix_len);
-            printf("%.*s", lcp_len - prefix_len, matches[0] + prefix_len);
+        bool ends_with_space = (strlen(input) > 0 && input[strlen(input) - 1] == ' ');
 
-            (*tab_counter) = 0;
-            return start_idx + lcp_len;
-        } 
+        if (!ends_with_space) 
+        {
+            int lcp_len = longest_common_prefix(matches, match_count);
+            
+            if (lcp_len != prefix_len) // lcp exists 
+            {
+                strncat(input, matches[0] + prefix_len, lcp_len - prefix_len);
+                printf("%.*s", lcp_len - prefix_len, matches[0] + prefix_len);
+
+                (*tab_counter) = 0;
+                return start_idx + lcp_len;
+            } 
+        }
 
         if ( (*tab_counter) > 1)
         {
@@ -268,7 +287,6 @@ int longest_common_prefix(char matches[][MAX_SIZE], int match_count)
         lcp[j] = '\0';
     }
 
-    //strcpy(matches[0], lcp);
     return strlen(lcp);
 }
 
@@ -333,14 +351,25 @@ bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
                 setenv("COMP_POINT", comp_point_str, 1);
 
 
-                char *prev_word    = (args_count >= 2) ? args[args_count - 2] : ""; //git remote set
-                char *current_word = (args_count >= 1) ? args[args_count - 1] : "";
+                bool ends_with_space = (strlen(input) > 0 && input[strlen(input) - 1] == ' ');
+                char *arg_2, *arg_3;
 
+                if (ends_with_space) 
+                {
+                    arg_2 = ""; //current  word
+                    arg_3 = (args_count > 1) ? args[args_count - 1] : ""; //previous word
+                }
+                else {
+                    arg_2 = (args_count > 1) ? args[args_count - 1] : ""; //current  word
+                    arg_3 = (args_count > 2) ? args[args_count - 2] : ""; //previous word
+                }
+                
+                
                 char *completer_args[5];
-                completer_args[0] = registered_paths[i]; //git remote set
+                completer_args[0] = registered_paths[i];
                 completer_args[1] = args[0];
-                completer_args[2] = current_word;
-                completer_args[3] = prev_word;
+                completer_args[2] = arg_2; //current  word
+                completer_args[3] = arg_3; //previous word
                 completer_args[4] = NULL;
 
                 dup2(fd[1], STDOUT_FILENO);
