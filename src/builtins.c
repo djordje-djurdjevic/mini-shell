@@ -222,6 +222,24 @@ bool complete(char **args) {
         strcpy(registered_commands[registered_count], args[3]);
         registered_count++;
     }
+    else if(strcmp(args[1], "-r") == 0) 
+    {
+        if(args[2] == NULL) 
+        {
+            return true;
+        }
+
+        for (int i = 0; i < registered_count; i++) 
+        {
+            if (strcmp(args[2], registered_commands[i]) == 0)
+            {
+                strcpy(registered_commands[i], registered_commands[registered_count-1]);
+                strcpy(registered_paths[i]   , registered_paths[registered_count-1]);
+                registered_count--;
+                break;
+            }
+        }
+    }
 
     return true;
 }

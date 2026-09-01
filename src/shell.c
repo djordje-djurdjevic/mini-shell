@@ -111,7 +111,7 @@ int main() {
         for (int i = 0; input[i] != '\0'; i++)
         {
             if (!isspace((unsigned char)input[i]))
-            { // isspace not working properly
+            {
                 only_white_spaces = false;
                 break;
             }
