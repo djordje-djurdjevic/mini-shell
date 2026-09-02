@@ -23,6 +23,14 @@ void restore_terminal(void)
 struct termios orig_termios;
 bool is_interactive_global;
 
+volatile __sig_atomic_t sigchld_received = 0;
+
+void sigchld_handler(int sig)
+{
+    sigchld_received = 1;
+}
+signal(SIGCHLD, sigchld_handler);
+
 int main() {
 
     char input[MAX_SIZE];
@@ -44,6 +52,13 @@ int main() {
     setbuf(stdout, NULL);
     while (1)
     {
+
+        if(sigchld_received)
+        {
+            sigchld_received = 0;
+            cleanup_finished_jobs();
+        }
+
         printf("$ ");
 
         if (is_interactive)
@@ -121,7 +136,8 @@ int main() {
             continue;
         }
 
-        char **args = parse_input(input);
+        bool is_background;
+        char **args = parse_input(input, &is_background);
         int target_fd = 1;
         int fd = check_output_redirect(args, &target_fd);
 
@@ -138,7 +154,7 @@ int main() {
             free_args(args);
             continue;
         }
-        else if (run_program(args, fd, target_fd))
+        else if (run_program(args, fd, target_fd, is_background))
         {
             free_args(args);
             continue;

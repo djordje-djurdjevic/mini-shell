@@ -47,7 +47,6 @@ $ cat out.txt
 - No piping (`|`) between commands yet.
 - No input redirection (`<`).
 - Fixed-size buffers (`MAX_SIZE = 1024`) for input, arguments, and `$PATH` — very long arguments or an unusually long `$PATH` are not yet bounds-checked everywhere.
-- No job control / background processes (`&`).
 - Arrow-key history navigation is not implemented (escape sequences are currently swallowed and ignored).
 - Tab completion doesn't account for leading whitespace before the first token.
 

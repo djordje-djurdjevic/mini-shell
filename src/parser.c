@@ -7,7 +7,7 @@
 #include "parser.h"
 
 
-char **parse_input(char *input)
+char **parse_input(char *input, bool *is_background)
 {
     int capacity = 10;
     int num_of_args = 0;
@@ -110,8 +110,18 @@ char **parse_input(char *input)
     // for (int i = 0; i < num_of_args; i++) {
     //     printf("%s|\n", arguments[i]);
     // }
+    if (strcmp(arguments[num_of_args - 1], "&") == 0)
+    {
+        *is_background = true;
+        arguments[num_of_args - 1] = NULL;
+    }
+    else
+    {
+        *is_background = false;
+        arguments[num_of_args] = NULL;
 
-    arguments[num_of_args] = NULL;
+    }
+
     return arguments;
 }
 

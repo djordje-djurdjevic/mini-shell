@@ -9,6 +9,7 @@ bool type(char *input);
 bool pwd(void);
 bool cd(char *input);
 bool complete(char **args);
+bool background_jobs();
 
 extern const char *BUILTINS[];
 extern const int BUILTINS_COUNT;
