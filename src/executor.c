@@ -95,6 +95,12 @@ void cleanup_finished_jobs()
             if (jobs[i].pid == finished_pid)
             {
                 snprintf(jobs[i].status, STATUS_LEN, "%-24s", "Done");
+
+                int len = strlen(jobs[i].command); 
+                if(len > 2) 
+                {
+                    jobs[i].command[len - 2] = '\0';
+                }
                 break;
             }
         }
