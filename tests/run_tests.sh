@@ -277,6 +277,41 @@ cat /tmp/foo/quz.md" \
 "No such file or directory"
 
 # ---------------------------------------------------------------------------
+# Background jobs
+# ---------------------------------------------------------------------------
+echo -e "${BOLD}-- background jobs --${NC}"
+run_output_test "start a background job" "sleep 0.01 &" "[1]"
+
+[ -p /tmp/fifo1 ] || mkfifo /tmp/fifo1
+[ -p /tmp/fifo2 ] || mkfifo /tmp/fifo2
+# run_output_test "print background job output" \
+# 	"cat /tmp/fifo1 &
+# 	cat /tmp/fifo2" "Hello from FIFO#1
+# 	Hello from FIFO#2" & ovo faila white trailing space
+{ 
+result=$(run_output_test "print background job output" \
+"cat /tmp/fifo1 &
+cat /tmp/fifo2" "Hello from FIFO#1
+Hello from FIFO#2")
+  echo "$result" > /tmp/test_result.txt
+} &
+
+sleep 0.5
+echo -ne "Hello from FIFO#1\n" > /tmp/fifo1
+echo -ne "Hello from FIFO#2\n" > /tmp/fifo2
+wait
+
+output=$(cat /tmp/test_result.txt)
+echo "$output"
+if [[ "$output" == *"PASS"* ]]; then
+    ((TOTAL_TESTS++))
+else
+    ((FAILED_TESTS++))
+    ((TOTAL_TESTS++))
+fi
+
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 if [ "$FAILED_TESTS" -gt 0 ]; then

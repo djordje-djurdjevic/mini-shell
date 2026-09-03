@@ -119,7 +119,6 @@ char **parse_input(char *input, bool *is_background)
     {
         *is_background = false;
         arguments[num_of_args] = NULL;
-
     }
 
     return arguments;

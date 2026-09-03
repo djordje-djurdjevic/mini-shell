@@ -250,5 +250,40 @@ bool complete(char **args) {
 
 bool background_jobs()
 {
+    char prefix = ' ';
+
+    if (job_count == 0) 
+    {
+        return true;
+    }
+    for (int i = 0; i < job_count; i++)
+    {   
+        if (i == job_count - 1)
+        {
+            prefix = '+';
+        }
+        else if (i == job_count - 2)
+        {
+            prefix = '-';
+        }
+        else 
+        {
+            prefix = ' ';
+        }
+
+        printf("[%d]%c  %s %s\n", jobs[i].job_number, prefix, jobs[i].status, jobs[i].command);
+    }
+
+    for (int i = job_count - 1; i >= 0; i--)
+    {
+        if(strncmp(jobs[i].status, "Done", 4) == 0)
+        {
+            free(jobs[i].command);
+            jobs[i] = jobs[job_count-1];
+            job_count--;
+        }
+    }
+    
+
     return true;
 }

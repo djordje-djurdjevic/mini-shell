@@ -4,6 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "common.h"
 #include "builtins.h"
@@ -27,14 +28,17 @@ volatile __sig_atomic_t sigchld_received = 0;
 
 void sigchld_handler(int sig)
 {
+    (void)sig;
     sigchld_received = 1;
 }
-signal(SIGCHLD, sigchld_handler);
 
 int main() {
 
+
     char input[MAX_SIZE];
     char ch;
+
+    signal(SIGCHLD, sigchld_handler);
 
     bool is_interactive = isatty(STDIN_FILENO); // is fd refering to terminal (tty) or something else (pipe |)
     is_interactive_global = is_interactive;
@@ -160,7 +164,7 @@ int main() {
             continue;
         }
 
-        printf("%s: command not found\n", input);
+        printf("%s: command not found\n", args[0]);
 
         if (fd != -1) 
         {

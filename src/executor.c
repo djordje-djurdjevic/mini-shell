@@ -9,8 +9,8 @@
 #include "executor.h"
 #include "common.h"
 
-int jobs_count = 0;
-int next_jobs_number = 1;
+int job_count = 0;
+int next_job_number = 1;
 Job jobs[MAX_JOBS];
 
 bool run_program(char **args, int fd, int target_fd, bool is_background)
@@ -64,10 +64,12 @@ bool run_program(char **args, int fd, int target_fd, bool is_background)
                     strcat(command_buf, " ");
                 }
             }
-            jobs[jobs_count++] = (Job){ .job_number = next_jobs_number++, .pid = pid, .command = strdup(command_buf) };
-            //dont forget to free
+            strcat(command_buf, " &");
+
+            jobs[job_count++] = (Job){ .job_number = next_job_number++, .pid = pid, .command = strdup(command_buf)};
+            snprintf(jobs[job_count-1].status, STATUS_LEN, "%-24s", "Running");            
             
-            printf("[%d] %d\n",next_jobs_number-1 ,pid);
+            printf("[%d] %d\n",next_job_number-1 ,pid);
         }
 
         if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
@@ -81,18 +83,19 @@ bool run_program(char **args, int fd, int target_fd, bool is_background)
 
 void cleanup_finished_jobs()
 {
+    //printf("DEBUG: cleanup called\n");
+    
     pid_t finished_pid;
     int status;
 
     while ( (finished_pid = waitpid(-1, &status, WNOHANG)) > 0)
     {
-        for (int i = 0; i < jobs_count; i++)
+        for (int i = 0; i < job_count; i++)
         {
             if (jobs[i].pid == finished_pid)
             {
-                free(jobs[i].command);
-                jobs[i] = jobs[jobs_count-1];
-                jobs_count--;
+                snprintf(jobs[i].status, STATUS_LEN, "%-24s", "Done");
+                break;
             }
         }
     }
