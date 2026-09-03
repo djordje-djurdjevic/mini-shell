@@ -310,6 +310,20 @@ else
     ((TOTAL_TESTS++))
 fi
 
+run_output_test "list multiple background jobs" \
+"sleep 0.01 &
+sleep 0.02 &
+sleep 0.03 &
+jobs" \
+"[1]   Running                  sleep 0.01 &
+[2]-  Running                  sleep 0.02 &
+[3]+  Running                  sleep 0.03 &"
+
+run_output_test "reap finished background job" \
+"sleep 0.01 &
+sleep 0.5
+jobs" \
+"Done"
 
 # ---------------------------------------------------------------------------
 # Summary

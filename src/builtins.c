@@ -279,7 +279,10 @@ bool background_jobs()
         if(strncmp(jobs[i].status, "Done", 4) == 0)
         {
             free(jobs[i].command);
-            jobs[i] = jobs[job_count-1];
+            for (int j = i; j < job_count-1 ; j++) 
+            {
+                jobs[j] = jobs[j+1];
+            }
             job_count--;
         }
     }
