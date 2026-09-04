@@ -81,7 +81,7 @@ bool run_program(char **args, int fd, int target_fd, bool is_background)
     return true;
 }
 
-void cleanup_finished_jobs()
+void mark_job_as_done()
 {
     //printf("DEBUG: cleanup called\n");
     

@@ -250,11 +250,19 @@ bool complete(char **args) {
 
 bool background_jobs()
 {
+    print_job_status("", 0); //len zero means show all
+    remove_done_jobs();
+
+    return true;
+}
+
+void print_job_status(char *compare_for_output, int len_cmp_for_output)
+{
     char prefix = ' ';
 
     if (job_count == 0) 
     {
-        return true;
+        return;
     }
     for (int i = 0; i < job_count; i++)
     {   
@@ -271,9 +279,15 @@ bool background_jobs()
             prefix = ' ';
         }
 
-        printf("[%d]%c  %s %s\n", jobs[i].job_number, prefix, jobs[i].status, jobs[i].command);
+        if(strncmp(jobs[i].status, compare_for_output, len_cmp_for_output) == 0)
+        {
+            printf("[%d]%c  %s %s\n", jobs[i].job_number, prefix, jobs[i].status, jobs[i].command);
+        }
     }
+}
 
+void remove_done_jobs()
+{
     for (int i = job_count - 1; i >= 0; i--)
     {
         if(strncmp(jobs[i].status, "Done", 4) == 0)
@@ -286,7 +300,4 @@ bool background_jobs()
             job_count--;
         }
     }
-    
-
-    return true;
 }

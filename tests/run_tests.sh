@@ -325,6 +325,15 @@ sleep 0.5
 jobs" \
 "Done"
 
+run_output_test "reap middle job, markers update correctly" \
+"sleep 0.02 &
+sleep 0.01 &
+sleep 0.02 &
+sleep 0.01
+jobs
+jobs" \
+"[1]-"
+
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------

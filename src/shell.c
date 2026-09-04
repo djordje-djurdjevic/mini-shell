@@ -57,11 +57,8 @@ int main() {
     while (1)
     {
 
-        if(sigchld_received)
-        {
-            sigchld_received = 0;
-            cleanup_finished_jobs();
-        }
+        print_job_status("Done", 4);
+        remove_done_jobs();
 
         printf("$ ");
 
@@ -74,6 +71,12 @@ int main() {
             while (ch != '\n')
             {
                 read(STDIN_FILENO, &ch, 1);
+
+                if(sigchld_received)
+                {
+                    sigchld_received = 0;
+                    mark_job_as_done();
+                }
 
                 if (ch == 9)    // tab
                 {
@@ -121,6 +124,12 @@ int main() {
             if (fgets(input, MAX_SIZE - 1, stdin) == NULL)
             {
                 break; // EOF or error
+            }
+
+            if(sigchld_received)
+            {
+                sigchld_received = 0;
+                mark_job_as_done();
             }
         }
         input[strcspn(input, "\n")] = '\0';
