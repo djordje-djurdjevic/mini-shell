@@ -66,6 +66,11 @@ bool run_program(char **args, int fd, int target_fd, bool is_background)
             }
             strcat(command_buf, " &");
 
+            if (job_count == 0)
+            {
+                next_job_number = 1;
+            }
+
             jobs[job_count++] = (Job){ .job_number = next_job_number++, .pid = pid, .command = strdup(command_buf)};
             snprintf(jobs[job_count-1].status, STATUS_LEN, "%-24s", "Running");            
             
