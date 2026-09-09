@@ -322,7 +322,10 @@ bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
 
     //printf("[DEBUG registered_count=%d]\n", registered_count);
 
-    char **args = parse_input(input);
+    bool dummy_background;
+    Pipeline pipeline = parse_input(input, &dummy_background);
+    char **args = pipeline.command[0].args;
+    
     int args_count = 0;
     while (args[args_count] != NULL) args_count++;
 
@@ -378,7 +381,7 @@ bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
 
                 close(fd[0]);
                 close(fd[1]);
-                free(args);
+                free_commands(pipeline);
 
                 _exit(127);
             }
@@ -392,7 +395,7 @@ bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
                 if (WIFEXITED(status) && WEXITSTATUS(status) == 127)
                 {
                     //printf("DEBUG: FALSE");
-                    free(args);
+                    free_commands(pipeline);
                     return false;
                 }
 
@@ -417,8 +420,8 @@ bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
                 }
                 
                 close(fd[0]);
-                free(args);
-
+                free_commands(pipeline);
+                
                 return true;
                 //resolve_completion(NULL, 0, 0, matches, 1, 0);
             }

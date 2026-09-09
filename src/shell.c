@@ -150,36 +150,36 @@ int main() {
         }
 
         bool is_background;
-        char **args = parse_input(input, &is_background);
+        Pipeline pipeline = parse_input(input, &is_background);
         int target_fd = 1;
-        int fd = check_output_redirect(args, &target_fd);
+        int fd = check_output_redirect(pipeline.command[0].args, &target_fd);
 
-        if (args[0] == NULL)
+        if (pipeline.command[0].args[0] == NULL)
         {
             if (fd != -1)
                 close(fd);
-            free_args(args);
+            free_commands(pipeline);
             continue;
         }
 
-        if (run_builtin(args, fd, target_fd))
+        if (run_builtin(pipeline.command[0].args, fd, target_fd))
         {
-            free_args(args);
+            free_commands(pipeline);
             continue;
         }
-        else if (run_program(args, fd, target_fd, is_background))
+        else if (run_program(pipeline.command[0].args, fd, target_fd, is_background))
         {
-            free_args(args);
+            free_commands(pipeline);
             continue;
         }
 
-        printf("%s: command not found\n", args[0]);
+        printf("%s: command not found\n", pipeline.command[0].args[0]);
 
         if (fd != -1) 
         {
             close(fd);   // if neither builtin nor program func closes it
         }
-        free_args(args); // freeing the memory from func parse_input
+        free_commands(pipeline); // freeing the memory from func parse_input
     }
 
     return 0;

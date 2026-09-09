@@ -7,7 +7,7 @@
 #include "parser.h"
 
 
-char **parse_input(char *input, bool *is_background)
+Pipeline parse_input(char *input, bool *is_background)
 {
     int capacity = 10;
     int num_of_args = 0;
@@ -121,14 +121,51 @@ char **parse_input(char *input, bool *is_background)
         arguments[num_of_args] = NULL;
     }
 
-    return arguments;
+    Pipeline pipeline;
+    pipeline.num_of_commands = 0;
+    pipeline.command[0].args = malloc(capacity * sizeof(char *));
+
+    num_of_args = 0;
+    capacity = 2;
+
+    
+    for (int i = 0; arguments[i] != NULL; i++)
+    {
+        if(strcmp(arguments[i], "|") == 0)
+        {   
+            pipeline.command[pipeline.num_of_commands].args[num_of_args] = NULL;        
+            pipeline.command[++pipeline.num_of_commands].args = malloc(capacity * sizeof(char *));
+            num_of_args = 0;
+            capacity = 2;
+        }
+        else
+        {
+            pipeline.command[pipeline.num_of_commands].args[num_of_args++] = arguments[i];        
+        }
+
+        if (num_of_args >= capacity - 1)
+        {
+            capacity *= 2;
+            pipeline.command[pipeline.num_of_commands].args  = realloc(
+            pipeline.command[pipeline.num_of_commands].args , capacity * sizeof(char *));
+        }
+    }
+
+    pipeline.command[pipeline.num_of_commands].args[num_of_args] = NULL;     
+    pipeline.num_of_commands++; // "| + 1"
+
+    free(arguments);
+    return pipeline;
 }
 
-void free_args(char **args)
+void free_commands(Pipeline pipeline)
 {
-    for (int i = 0; args[i] != NULL; i++)
+    for (int i = 0; i < pipeline.num_of_commands; i++)
     {
-        free(args[i]);
+        for (int j = 0; pipeline.command[i].args[j] != NULL; j++)
+        {
+            free(pipeline.command[i].args[j]);
+        }
+        free(pipeline.command[i].args);
     }
-    free(args);
 }
