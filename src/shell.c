@@ -12,6 +12,7 @@
 #include "executor.h"
 #include "parser.h"
 #include "redirect.h"
+#include "pipe.h"
 
 void restore_terminal(void)
 {
@@ -151,6 +152,17 @@ int main() {
 
         bool is_background;
         Pipeline pipeline = parse_input(input, &is_background);
+
+        if(pipeline.num_of_commands > 1)
+        {
+            if(!execute_pipe(pipeline, is_background))
+            {
+                printf("%s: command not found\n", pipeline.command[0].args[0]);
+            }
+            free_commands(pipeline);
+            continue;
+        }
+
         int target_fd = 1;
         int fd = check_output_redirect(pipeline.command[0].args, &target_fd);
 

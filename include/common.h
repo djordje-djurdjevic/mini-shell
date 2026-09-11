@@ -9,9 +9,12 @@
 #define MAX_MATCHES 64
 #define MAX_JOBS 32
 #define STATUS_LEN 25
+#define MAX_PIPELINE 16
+
 
 extern struct termios orig_termios;
 extern bool is_interactive_global;
+
 
 typedef struct {
     int job_number;
@@ -23,5 +26,15 @@ typedef struct {
 extern Job jobs[MAX_JOBS];
 extern int job_count;
 extern int next_job_number;
+
+
+typedef struct {
+    char **args;
+} Command;
+
+typedef struct {
+    Command command[MAX_PIPELINE];
+    int num_of_commands;
+} Pipeline;
 
 #endif

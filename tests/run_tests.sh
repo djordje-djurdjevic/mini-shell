@@ -326,13 +326,31 @@ jobs" \
 "Done"
 
 run_output_test "reap middle job, markers update correctly" \
-"sleep 0.02 &
-sleep 0.01 &
-sleep 0.02 &
+"sleep 0.03 &
+sleep 0.001 &
+sleep 0.03 &
 sleep 0.01
 jobs
 jobs" \
 "[1]-"
+
+
+# ---------------------------------------------------------------------------
+# Piping
+# ---------------------------------------------------------------------------
+echo -e "${BOLD}-- Piping between commands --${NC}"
+run_output_test "echo to cat" "echo hello | cat" "hello"
+run_output_test "echo to wc -w" "echo \"one two three\" | wc -w" "3"
+
+touch /tmp/test.txt
+run_output_test "wc read from file" "printf \"line1\nline2\nline3\n\" > /tmp/test.txt
+cat /tmp/test.txt | wc" "      3       3      18"
+run_output_test "echo to grep" "echo -e "apple\nbanana\ncherry" | grep an" "banana"
+run_output_test "Unknown command" "echo test | nepostojecakomanda" "command not found"
+run_output_test "Shell still works" "echo done | cat
+echo \"shell still works\"" "shell still works"
+run_exact_output_test "tail test" "tail -f /tmp/test.txt | head -n 3" "line1"
+run_output_test 'triple pipe chain' 'printf "banana\napple\ncherry\napple\n" | sort | uniq -c | sort -rn' '2 apple'
 
 # ---------------------------------------------------------------------------
 # Summary
