@@ -19,3 +19,7 @@ Shell input
 [ ] Cannot move freely with arrows left/right trough the current input Expected: to move back and fourth trough the current input text Actual: nothing happnes just ignores the arrow keys and escape sequences.
 
 [ ] Completion doesn't  work if first tokens are spaces. Input: "____ech" Expected: to complete the input to "___echo" Actual: Rings the bell like there aren't any matches. 
+
+Piping commands
+
+[ ]

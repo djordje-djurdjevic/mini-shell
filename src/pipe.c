@@ -6,6 +6,7 @@
 #include "common.h"
 #include "pipe.h"
 #include "redirect.h"
+#include "builtins.h"
 
 bool execute_pipe(Pipeline pipeline, bool is_background) 
 {
@@ -46,17 +47,21 @@ bool execute_pipe(Pipeline pipeline, bool is_background)
                 }
             }
 
-
             for(int k = 0; k < pipeline.num_of_commands - 1; k++)
             {
                 close(pipes[k][0]);
                 close(pipes[k][1]);
             }
 
-            execvp(pipeline.command[i].args[0], pipeline.command[i].args);
-
-            // if it gets here it means it failed
-            _exit(127);
+            if(run_builtin(pipeline.command[i].args, -1, 1))
+            {
+                _exit(0);
+            }
+            else{
+                execvp(pipeline.command[i].args[0], pipeline.command[i].args);
+                // if it gets here it means it failed
+                _exit(127);
+            }
         }
         else
         {   
