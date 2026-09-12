@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "pipe.h"
+#include "redirect.h"
 
 bool execute_pipe(Pipeline pipeline, bool is_background) 
 {
@@ -27,15 +28,24 @@ bool execute_pipe(Pipeline pipeline, bool is_background)
         }
         else if (pids[i] == 0)
         { // this does the child process
-            
-            if(i < pipeline.num_of_commands - 1)
-            {
-                dup2(pipes[i][1], STDOUT_FILENO);
-            }
+
             if(i > 0)
             {
                 dup2(pipes[i-1][0], STDIN_FILENO);
             }
+            if(i < pipeline.num_of_commands - 1)
+            {
+                dup2(pipes[i][1], STDOUT_FILENO);
+            }
+            else {
+                int target_fd;
+                int fd = check_output_redirect(pipeline.command[i].args, &target_fd);
+                if (fd != -1) 
+                {
+                    dup2(fd, target_fd);
+                }
+            }
+
 
             for(int k = 0; k < pipeline.num_of_commands - 1; k++)
             {
@@ -54,10 +64,10 @@ bool execute_pipe(Pipeline pipeline, bool is_background)
         }
     }
 
-    for(int k = 0; k < pipeline.num_of_commands - 1; k++)
+    for(int i = 0; i < pipeline.num_of_commands - 1; i++)
     {
-        close(pipes[k][0]);
-        close(pipes[k][1]);
+        close(pipes[i][0]);
+        close(pipes[i][1]);
     }
 
     for(int i = 0; i < pipeline.num_of_commands; i++)
@@ -73,9 +83,6 @@ bool execute_pipe(Pipeline pipeline, bool is_background)
             no_error = false;
         }
     }
-
-
-    //check redirect here
 
     if(is_background)
     {

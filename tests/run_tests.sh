@@ -321,7 +321,7 @@ jobs" \
 
 run_output_test "reap finished background job" \
 "sleep 0.01 &
-sleep 0.5
+sleep 0.2
 jobs" \
 "Done"
 
@@ -351,6 +351,15 @@ run_output_test "Shell still works" "echo done | cat
 echo \"shell still works\"" "shell still works"
 run_exact_output_test "tail test" "tail -f /tmp/test.txt | head -n 3" "line1"
 run_output_test 'triple pipe chain' 'printf "banana\napple\ncherry\napple\n" | sort | uniq -c | sort -rn' '2 apple'
+run_output_test 'pipe with background job' 'sleep 0.1 | sleep 0.1 &' '[1]' 
+
+touch /tmp/out1.txt
+run_output_test 'pipe with redirect >' 'echo hello | cat > /tmp/out1.txt
+cat /tmp/out1.txt' 'hello'
+run_output_test 'pipe with redirect >>' 'echo first | cat > /tmp/out1.txt
+echo second | cat >> /tmp/out1.txt
+cat /tmp/out1.txt' 'first
+second'
 
 # ---------------------------------------------------------------------------
 # Summary

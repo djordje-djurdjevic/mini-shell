@@ -47,7 +47,6 @@ bool run_program(char **args, int fd, int target_fd, bool is_background)
         }
 
         int status;
-
         if (!is_background)
         {
             waitpid(pid, &status, 0);
