@@ -37,4 +37,8 @@ typedef struct {
     int num_of_commands;
 } Pipeline;
 
+extern int command_history_capacity;
+extern int command_counter;
+extern char **command_history;
+
 #endif

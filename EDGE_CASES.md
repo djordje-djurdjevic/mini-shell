@@ -22,4 +22,4 @@ Shell input
 
 Piping commands
 
-[ ]
+[ ] Problem: run_builtin returns a single bool that conflates two different meanings — "this isn't a builtin" (should fall through to execvp) vs. "this is a builtin but it failed internally" (e.g. cd into a nonexistent directory). Both cases currently return false. Risk: In the pipeline child code, if (run_builtin(...)) { _exit(0); } else { execvp(...); } treats false as "not a builtin, try execvp." If a real builtin fails (e.g. cd bad_dir | ...), the code will wrongly attempt execvp("cd", ...) instead of correctly exiting after a failed builtin.

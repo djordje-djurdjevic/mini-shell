@@ -9,6 +9,7 @@ bool type(char *input);
 bool pwd(void);
 bool cd(char *input);
 bool complete(char **args);
+bool history();
 
 bool background_jobs();
 void remove_done_jobs();

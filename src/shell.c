@@ -22,6 +22,15 @@ void restore_terminal(void)
     }
 }
 
+void free_history_commands()
+{
+    for(int i = 0; i < command_counter; i++)
+    {
+        free(command_history[i]);
+    }
+    free(command_history);
+}
+
 struct termios orig_termios;
 bool is_interactive_global;
 
@@ -33,11 +42,16 @@ void sigchld_handler(int sig)
     sigchld_received = 1;
 }
 
-int main() {
+int command_capacity = 8;
+int command_counter = 0;
+char **command_history;
 
+int main() {
 
     char input[MAX_SIZE];
     char ch;
+ 
+    command_history = malloc(command_capacity * sizeof(char *));
 
     signal(SIGCHLD, sigchld_handler);
 
@@ -52,6 +66,7 @@ int main() {
         raw.c_lflag &= ~(ECHO | ICANON); // Disable Canonical Mode
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
         atexit(restore_terminal);
+        atexit(free_history_commands);
     }
 
     setbuf(stdout, NULL);
@@ -135,6 +150,14 @@ int main() {
         }
         input[strcspn(input, "\n")] = '\0';
 
+        //append to history
+        if (command_counter >= command_capacity)
+        {
+            command_capacity *= 2;
+            command_history = realloc(command_history, command_capacity * sizeof(char *));
+        }
+        command_history[command_counter++] = strdup(input);
+    
         // if input is blank or only spaces
         bool only_white_spaces = true;
         for (int i = 0; input[i] != '\0'; i++)

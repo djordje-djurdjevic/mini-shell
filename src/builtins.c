@@ -9,7 +9,7 @@
 #include "completion.h"
 
 
-const char *BUILTINS[] = {"echo", "exit", "type", "pwd", "cd", "complete", "jobs"};
+const char *BUILTINS[] = {"echo", "exit", "type", "pwd", "cd", "complete", "jobs", "history"};
 const int BUILTINS_COUNT = sizeof(BUILTINS) / sizeof(BUILTINS[0]);
 
 #define MAX_COMPLETIONS 32
@@ -89,6 +89,11 @@ bool run_builtin(char **args, int fd, int target_fd)
     {
         result = background_jobs();
     }
+    else if (strcmp(args[0], "history") == 0)
+    {
+        result = history();
+    }
+
 
     restore_std(fd, saved_std, target_fd);
     return result;
@@ -300,4 +305,14 @@ void remove_done_jobs()
             job_count--;
         }
     }
+}
+
+bool history()
+{
+    for(int i = 0; i < command_counter; i++)
+    {
+        printf("%4d  %s\n", i+1, command_history[i]);
+    }
+
+    return true;
 }
