@@ -91,7 +91,7 @@ bool run_builtin(char **args, int fd, int target_fd)
     }
     else if (strcmp(args[0], "history") == 0)
     {
-        result = history();
+        result = history(args);
     }
 
 
@@ -307,9 +307,28 @@ void remove_done_jobs()
     }
 }
 
-bool history()
+bool history(char **args)
 {
-    for(int i = 0; i < command_counter; i++)
+    int start;
+
+    if(args[1] == NULL)
+    {
+        start = 0;
+    }
+    else
+    {
+        char *endptr;
+        long val = strtol(args[1], &endptr, 10);
+    
+        if (*endptr != '\0')
+        {
+            return false;
+        }
+
+        start = command_counter - val;
+    }
+
+    for(int i = start; i < command_counter; i++)
     {
         printf("%4d  %s\n", i+1, command_history[i]);
     }
