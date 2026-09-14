@@ -154,7 +154,7 @@ int main() {
             command_history = realloc(command_history, command_capacity * sizeof(char *));
         }
         command_history[command_counter++] = strdup(input);
-        history_position = command_counter-1;
+        history_position = command_counter;
 
         // if input is blank or only spaces
         bool only_white_spaces = true;

@@ -182,11 +182,41 @@ int parse_escape_sequence(char *input, int i)
     }
     if (seq[1] == 'A') // up arrow ESC [ A
     {
-        if (command_counter > 0 && history_position >= 0) 
+        if(history_position == 0)
+        {
+            printf("\a");
+            return i;
+        }
+
+        if (command_counter > 0 && history_position > 0) 
         {
             i = up_arrow(input, i);
-            //printf("DEBUG: command counter: %d, hist_pos: %d\n", command_counter, history_position);
+            //printf("DEBUG: command counter: %d, hist_pos: %d\n", command_counter, history_position)
+        }
+    }
+    else if (seq[1] == 'B')
+    {
+        if(history_position == command_counter)
+        {
+            printf("\a");
+            return i;
+        }
 
+        if(history_position == command_counter - 1)
+        {   
+            for(int j = i; j > 0; j--)
+            {
+                i = backspace(input, i);
+            }
+            strcpy(input, "");
+            history_position++;
+
+            return i;
+        }
+
+        if (command_counter > 0 && history_position != command_counter - 1) 
+        {
+            i = down_arrow(input, i);
         }
     }
 
@@ -199,10 +229,28 @@ int up_arrow(char *input, int i)
     {
         i = backspace(input, i);
     }
+
+    history_position--;
     printf("%s", command_history[history_position]);
-    stpcpy(input, command_history[history_position]);
+    fflush(stdout);
+    strcpy(input, command_history[history_position]);
     
-    return strlen(command_history[history_position--]);
+    return strlen(command_history[history_position]);
+}
+
+int down_arrow(char *input, int i)
+{
+    for(int j = i; j > 0; j--)
+    {
+        i = backspace(input, i);
+    }
+    
+    history_position++;
+    printf("%s", command_history[history_position]);
+    fflush(stdout);
+    strcpy(input, command_history[history_position]);
+    
+    return strlen(command_history[history_position]);
 }
 
 int backspace(char *input, int i)
