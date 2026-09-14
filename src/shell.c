@@ -42,9 +42,12 @@ void sigchld_handler(int sig)
     sigchld_received = 1;
 }
 
+
+int history_position = 0;
 int command_capacity = 8;
 int command_counter = 0;
 char **command_history;
+
 
 int main() {
 
@@ -103,21 +106,15 @@ int main() {
                 }
                 else if (ch == 27)
                 { // Start of esc sequence, cant move with arrows freely trough terminal
-                    char seq[2];
-                    read(STDIN_FILENO, &seq[0], 1);
-                    read(STDIN_FILENO, &seq[1], 1);
-                    // ignore sequence do nothing
+                    
+                    i = parse_escape_sequence(input, i);
                     continue;
                 }
                 else if (ch == 127)
                 { // backspace
                     if (i > 0)
                     {
-                        i--;
-                        input[i] = '\0';
-                        printf("\b \b");
-                        fflush(stdout);
-
+                        i = backspace(input, i);
                         tab_counter = 0;
                     }
                 }
@@ -157,7 +154,8 @@ int main() {
             command_history = realloc(command_history, command_capacity * sizeof(char *));
         }
         command_history[command_counter++] = strdup(input);
-    
+        history_position = command_counter-1;
+
         // if input is blank or only spaces
         bool only_white_spaces = true;
         for (int i = 0; input[i] != '\0'; i++)

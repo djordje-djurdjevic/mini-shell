@@ -322,7 +322,7 @@ bool history(char **args)
     
         if (*endptr != '\0')
         {
-            return false;
+            return true;
         }
 
         start = command_counter - val;

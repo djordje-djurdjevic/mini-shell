@@ -169,3 +169,48 @@ void free_commands(Pipeline pipeline)
         free(pipeline.command[i].args);
     }
 }
+
+int parse_escape_sequence(char *input, int i)
+{
+    char seq[2];
+    if (read(STDIN_FILENO, &seq[0], 1) != 1) return i;
+    if (read(STDIN_FILENO, &seq[1], 1) != 1) return i;
+
+    if (seq[0] != '[') 
+    {
+        return i;
+    }
+    if (seq[1] == 'A') // up arrow ESC [ A
+    {
+        if (command_counter > 0 && history_position >= 0) 
+        {
+            i = up_arrow(input, i);
+            //printf("DEBUG: command counter: %d, hist_pos: %d\n", command_counter, history_position);
+
+        }
+    }
+
+    return i;
+}
+
+int up_arrow(char *input, int i)
+{
+    for(int j = i; j > 0; j--)
+    {
+        i = backspace(input, i);
+    }
+    printf("%s", command_history[history_position]);
+    stpcpy(input, command_history[history_position]);
+    
+    return strlen(command_history[history_position--]);
+}
+
+int backspace(char *input, int i)
+{
+    i--;
+    input[i] = '\0';
+    printf("\b \b");
+    fflush(stdout);
+
+    return i;
+}

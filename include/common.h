@@ -40,5 +40,6 @@ typedef struct {
 extern int command_history_capacity;
 extern int command_counter;
 extern char **command_history;
+extern int history_position;
 
 #endif
