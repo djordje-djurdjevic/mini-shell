@@ -42,11 +42,10 @@ void sigchld_handler(int sig)
     sigchld_received = 1;
 }
 
-
-int history_position = 0;
-int command_capacity = 8;
+int command_history_capacity = 8;
 int command_counter = 0;
 char **command_history;
+int history_position = 0;
 
 
 int main() {
@@ -54,7 +53,7 @@ int main() {
     char input[MAX_SIZE];
     char ch;
  
-    command_history = malloc(command_capacity * sizeof(char *));
+    command_history = malloc(command_history_capacity * sizeof(char *));
 
     signal(SIGCHLD, sigchld_handler);
 
@@ -148,10 +147,10 @@ int main() {
         input[strcspn(input, "\n")] = '\0';
 
         //append to history
-        if (command_counter >= command_capacity)
+        if (command_counter >= command_history_capacity)
         {
-            command_capacity *= 2;
-            command_history = realloc(command_history, command_capacity * sizeof(char *));
+            command_history_capacity *= 2;
+            command_history = realloc(command_history, command_history_capacity * sizeof(char *));
         }
         command_history[command_counter++] = strdup(input);
         history_position = command_counter;

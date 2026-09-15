@@ -311,6 +311,11 @@ bool history(char **args)
 {
     int start;
 
+    if (history_r_flag_helper(args))
+    {
+        return true;
+    }
+
     if(args[1] == NULL)
     {
         start = 0;
@@ -334,4 +339,53 @@ bool history(char **args)
     }
 
     return true;
+}
+
+bool history_r_flag_helper(char **args)
+{
+
+    if(args[1] == NULL)
+    {
+        return false;
+    }
+
+    if (strcmp(args[1], "-r") == 0)
+    {
+        if(args[2] == NULL)
+        {
+            return false;
+        }
+
+        FILE *file = fopen(args[2], "r");
+
+        if (file == NULL)
+        {
+            return false;
+        }
+
+        char buffer[MAX_SIZE];
+        while(fgets(buffer, sizeof(buffer), file) != NULL)
+        {
+
+            if (command_counter >= command_history_capacity)
+            {
+                command_history_capacity *= 2;
+                command_history = realloc(command_history, command_history_capacity * sizeof(char *));
+            }
+            buffer[strlen(buffer)- 1] = '\0';
+            if(strlen(buffer) == 0) 
+            {
+                continue;
+            }
+
+            command_history[command_counter++] = strdup(buffer);
+        }
+
+        history_position = command_counter;
+        fclose(file);
+
+        return true;
+    }
+
+    return false;
 }
