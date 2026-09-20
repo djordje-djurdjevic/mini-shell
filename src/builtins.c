@@ -315,6 +315,10 @@ bool history(char **args)
     {
         return true;
     }
+    else if(history_w_flag_helper(args))
+    {
+        return true;
+    }
 
     if(args[1] == NULL)
     {
@@ -389,3 +393,35 @@ bool history_r_flag_helper(char **args)
 
     return false;
 }
+
+bool history_w_flag_helper(char **args)
+{
+    if(args[1] == NULL)
+    {
+        return false;
+    }
+
+    if (strcmp(args[1], "-w") == 0)
+    {
+
+        if(args[1] == NULL)
+        {
+        return false;
+        }
+
+        FILE *file = fopen(args[2], "w");
+        if (file == NULL)
+        {
+            return false;
+        }
+
+        for(int i = 0;  i < command_counter; i++)
+        {
+            fprintf(file, "%s\n", command_history[i]);
+        }
+
+        fclose(file);
+    }
+    return true;
+}
+

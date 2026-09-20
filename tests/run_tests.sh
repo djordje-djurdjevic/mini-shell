@@ -369,6 +369,15 @@ touch /tmp/history.txt
 echo "echo hello" > /tmp/history.txt
 echo "echo world" >> /tmp/history.txt
 echo "" >> /tmp/history.txt
+run_output_test 'reading history from a file (no empty command)' 'history -r /tmp/history
+history' '$ $    1  history -r /tmp/history'
+run_output_test 'writing history to a file' 'echo hello
+echo world
+history -w /tmp/history.txt
+cat /tmp/history.txt' '$ hello
+$ world
+$ $ echo hello
+echo world' 
 
 # ---------------------------------------------------------------------------
 # Summary
