@@ -319,6 +319,10 @@ bool history(char **args)
     {
         return true;
     }
+    else if(history_a_flag_helper(args))
+    {
+        return true;
+    }
 
     if(args[1] == NULL)
     {
@@ -352,6 +356,8 @@ bool history_r_flag_helper(char **args)
     {
         return false;
     }
+    //printf("DEBUG: Function r flag is called");
+
 
     if (strcmp(args[1], "-r") == 0)
     {
@@ -386,8 +392,8 @@ bool history_r_flag_helper(char **args)
         }
 
         history_position = command_counter;
+        
         fclose(file);
-
         return true;
     }
 
@@ -400,13 +406,14 @@ bool history_w_flag_helper(char **args)
     {
         return false;
     }
+    //printf("DEBUG: Function w flag is called");
 
     if (strcmp(args[1], "-w") == 0)
     {
 
-        if(args[1] == NULL)
+        if(args[2] == NULL)
         {
-        return false;
+            return false;
         }
 
         FILE *file = fopen(args[2], "w");
@@ -421,7 +428,47 @@ bool history_w_flag_helper(char **args)
         }
 
         fclose(file);
+        return true;
     }
-    return true;
+
+    return false;
+}
+
+
+bool history_a_flag_helper(char **args)
+{
+    if(args[1] == NULL)
+    {
+        return false;
+    }
+    //printf("DEBUG: Function a flag is called");
+
+    if (strcmp(args[1], "-a") == 0)
+    {
+
+        if(args[2] == NULL)
+        {
+            return false;
+        }
+
+        FILE *file = fopen(args[2], "a");
+        if (file == NULL)
+        {
+            return false;
+        }
+        //printf("DEBUG: File opened.");
+
+
+        for(int i = history_append_position;  i < command_counter; i++)
+        {
+            fprintf(file, "%s\n", command_history[i]);
+        }
+        history_append_position = command_counter;
+
+        fclose(file);
+        return true;
+    }
+
+    return false;
 }
 

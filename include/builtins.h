@@ -12,6 +12,7 @@ bool complete(char **args);
 bool history(char **args);
 bool history_r_flag_helper(char **args);
 bool history_w_flag_helper(char **args);
+bool history_a_flag_helper(char **args);
 
 bool background_jobs();
 void remove_done_jobs();

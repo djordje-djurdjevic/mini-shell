@@ -46,6 +46,7 @@ int command_history_capacity = 8;
 int command_counter = 0;
 char **command_history;
 int history_position = 0;
+int history_append_position = 0;
 
 
 int main() {
@@ -170,9 +171,11 @@ int main() {
             continue;
         }
 
+        //parsing input
         bool is_background;
         Pipeline pipeline = parse_input(input, &is_background);
 
+        //execute if pipes exist
         if(pipeline.num_of_commands > 1)
         {
             if(!execute_pipe(pipeline, is_background))
