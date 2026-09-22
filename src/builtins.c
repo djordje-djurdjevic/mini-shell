@@ -363,6 +363,7 @@ bool history_r_flag_helper(char **args)
     {
         if(args[2] == NULL)
         {
+            //printf("DEBUG: arg[2] fail");
             return false;
         }
 
@@ -370,8 +371,11 @@ bool history_r_flag_helper(char **args)
 
         if (file == NULL)
         {
+            //printf("DEBUG: invalid file");
             return false;
         }
+        //printf("DEBUG: valid file");
+
 
         char buffer[MAX_SIZE];
         while(fgets(buffer, sizeof(buffer), file) != NULL)
@@ -396,6 +400,8 @@ bool history_r_flag_helper(char **args)
         fclose(file);
         return true;
     }
+    //printf("DEBUG: arg[1] fail");
+
 
     return false;
 }

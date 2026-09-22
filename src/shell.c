@@ -72,6 +72,15 @@ int main() {
         atexit(free_history_commands);
     }
 
+    //reading history from histfile env var
+    {
+        char *temp_args_for_history[3];
+        temp_args_for_history[0] = "history";
+        temp_args_for_history[1] = "-r";
+        temp_args_for_history[2] = getenv("HISTFILE");
+        history_r_flag_helper(temp_args_for_history);
+    }
+
     setbuf(stdout, NULL);
     while (1)
     {
