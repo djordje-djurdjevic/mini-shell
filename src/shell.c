@@ -14,6 +14,10 @@
 #include "redirect.h"
 #include "pipe.h"
 
+// temporary
+void read_history_on_start();
+void write_history_on_exit();
+
 void restore_terminal(void)
 {
     if (is_interactive_global)
@@ -69,17 +73,12 @@ int main() {
         raw.c_lflag &= ~(ECHO | ICANON); // Disable Canonical Mode
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
         atexit(restore_terminal);
-        atexit(free_history_commands);
     }
+    atexit(free_history_commands);
+    atexit(write_history_on_exit);
 
     //reading history from histfile env var
-    {
-        char *temp_args_for_history[3];
-        temp_args_for_history[0] = "history";
-        temp_args_for_history[1] = "-r";
-        temp_args_for_history[2] = getenv("HISTFILE");
-        history_r_flag_helper(temp_args_for_history);
-    }
+    read_history_on_start();
 
     setbuf(stdout, NULL);
     while (1)
@@ -227,4 +226,22 @@ int main() {
     }
 
     return 0;
+}
+
+void write_history_on_exit()
+{
+    char *temp_args_for_history[3];
+    temp_args_for_history[0] = "history";
+    temp_args_for_history[1] = "-w";
+    temp_args_for_history[2] = getenv("HISTFILE");
+    history_w_flag_helper(temp_args_for_history);
+}
+
+void read_history_on_start()
+{
+    char *temp_args_for_history[3];
+    temp_args_for_history[0] = "history";
+    temp_args_for_history[1] = "-r";
+    temp_args_for_history[2] = getenv("HISTFILE");
+    history_r_flag_helper(temp_args_for_history);
 }

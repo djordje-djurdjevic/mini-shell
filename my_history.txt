@@ -1,6 +1,0 @@
-make run
-vim ~/.bashrc
-source ~/.bashrc
-ls -a
-source ~/.bashrc
-echo $HISTFILE
