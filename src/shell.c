@@ -13,40 +13,24 @@
 #include "parser.h"
 #include "redirect.h"
 #include "pipe.h"
+#include "history.h"
 
-// temporary
-void read_history_on_start();
-void write_history_on_exit();
+void restore_terminal(void);
 
-void restore_terminal(void)
-{
-    if (is_interactive_global)
-    {
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
-    }
-}
+void free_history_commands();
 
-void free_history_commands()
-{
-    for(int i = 0; i < command_counter; i++)
-    {
-        free(command_history[i]);
-    }
-    free(command_history);
-}
+int parse_escape_sequence(char *input, int i);
+int up_arrow(char *input, int i);
+int down_arrow(char *input, int i);
+int backspace(char *input, int i);
 
 struct termios orig_termios;
 bool is_interactive_global;
 
 volatile __sig_atomic_t sigchld_received = 0;
+void sigchld_handler(int sig);
 
-void sigchld_handler(int sig)
-{
-    (void)sig;
-    sigchld_received = 1;
-}
-
-int command_history_capacity = 8;
+int command_history_capacity = 16;
 int command_counter = 0;
 char **command_history;
 int history_position = 0;
@@ -228,20 +212,120 @@ int main() {
     return 0;
 }
 
-void write_history_on_exit()
+
+void free_history_commands()
 {
-    char *temp_args_for_history[3];
-    temp_args_for_history[0] = "history";
-    temp_args_for_history[1] = "-w";
-    temp_args_for_history[2] = getenv("HISTFILE");
-    history_w_flag_helper(temp_args_for_history);
+    for(int i = 0; i < command_counter; i++)
+    {
+        free(command_history[i]);
+    }
+    free(command_history);
 }
 
-void read_history_on_start()
+void restore_terminal(void)
 {
-    char *temp_args_for_history[3];
-    temp_args_for_history[0] = "history";
-    temp_args_for_history[1] = "-r";
-    temp_args_for_history[2] = getenv("HISTFILE");
-    history_r_flag_helper(temp_args_for_history);
+    if (is_interactive_global)
+    {
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+    }
+}
+
+void sigchld_handler(int sig)
+{
+    (void)sig;
+    sigchld_received = 1;
+}
+
+
+int parse_escape_sequence(char *input, int i)
+{
+    char seq[2];
+    if (read(STDIN_FILENO, &seq[0], 1) != 1) return i;
+    if (read(STDIN_FILENO, &seq[1], 1) != 1) return i;
+
+    if (seq[0] != '[') 
+    {
+        return i;
+    }
+    if (seq[1] == 'A') // up arrow ESC [ A
+    {
+        if(history_position == 0)
+        {
+            printf("\a");
+            return i;
+        }
+
+        if (command_counter > 0 && history_position > 0) 
+        {
+            i = up_arrow(input, i);
+            //printf("DEBUG: command counter: %d, hist_pos: %d\n", command_counter, history_position)
+        }
+    }
+    else if (seq[1] == 'B')
+    {
+        if(history_position == command_counter)
+        {
+            printf("\a");
+            return i;
+        }
+
+        if(history_position == command_counter - 1)
+        {   
+            for(int j = i; j > 0; j--)
+            {
+                i = backspace(input, i);
+            }
+            strcpy(input, "");
+            history_position++;
+
+            return i;
+        }
+
+        if (command_counter > 0 && history_position != command_counter - 1) 
+        {
+            i = down_arrow(input, i);
+        }
+    }
+
+    return i;
+}
+
+int up_arrow(char *input, int i)
+{
+    for(int j = i; j > 0; j--)
+    {
+        i = backspace(input, i);
+    }
+
+    history_position--;
+    printf("%s", command_history[history_position]);
+    fflush(stdout);
+    strcpy(input, command_history[history_position]);
+    
+    return strlen(command_history[history_position]);
+}
+
+int down_arrow(char *input, int i)
+{
+    for(int j = i; j > 0; j--)
+    {
+        i = backspace(input, i);
+    }
+    
+    history_position++;
+    printf("%s", command_history[history_position]);
+    fflush(stdout);
+    strcpy(input, command_history[history_position]);
+    
+    return strlen(command_history[history_position]);
+}
+
+int backspace(char *input, int i)
+{
+    i--;
+    input[i] = '\0';
+    printf("\b \b");
+    fflush(stdout);
+
+    return i;
 }
