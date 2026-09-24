@@ -329,7 +329,7 @@ run_output_test "reap middle job, markers update correctly" \
 "sleep 0.3 &
 sleep 0.01 &
 sleep 0.3 &
-sleep 0.01
+sleep 0.1
 jobs
 jobs" \
 "[1]-"
@@ -365,6 +365,7 @@ second'
 # ---------------------------------------------------------------------------
 # History
 # ---------------------------------------------------------------------------
+echo -e "${BOLD}-- history --${NC}"
 touch /tmp/history.txt
 echo "echo hello" > /tmp/history.txt
 echo "echo world" >> /tmp/history.txt
@@ -378,6 +379,8 @@ cat /tmp/history.txt' '$ hello
 $ world
 $ $ echo hello
 echo world' 
+run_output_test 'appending history to a file' 'echo append#
+history -a /tmp/history.txt' 'append#'
 
 # ---------------------------------------------------------------------------
 # Summary

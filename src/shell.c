@@ -15,8 +15,8 @@
 #include "pipe.h"
 #include "history.h"
 
-void restore_terminal(void);
 
+void restore_terminal(void);
 void free_history_commands();
 
 int parse_escape_sequence(char *input, int i);
@@ -24,17 +24,20 @@ int up_arrow(char *input, int i);
 int down_arrow(char *input, int i);
 int backspace(char *input, int i);
 
+
 struct termios orig_termios;
 bool is_interactive_global;
 
 volatile __sig_atomic_t sigchld_received = 0;
 void sigchld_handler(int sig);
 
+
 int command_history_capacity = 16;
 int command_counter = 0;
 char **command_history;
 int history_position = 0;
 int history_append_position = 0;
+int history_append_position_at_exit = 0;
 
 
 int main() {
@@ -49,6 +52,7 @@ int main() {
     bool is_interactive = isatty(STDIN_FILENO); // is fd refering to terminal (tty) or something else (pipe |)
     is_interactive_global = is_interactive;
 
+    atexit(free_history_commands);
     struct termios raw;
     if (is_interactive)
     {
@@ -57,12 +61,16 @@ int main() {
         raw.c_lflag &= ~(ECHO | ICANON); // Disable Canonical Mode
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
         atexit(restore_terminal);
-    }
-    atexit(free_history_commands);
-    atexit(write_history_on_exit);
 
-    //reading history from histfile env var
-    read_history_on_start();
+        atexit(append_history_on_exit);
+        //reading history from histfile env var
+        read_history_on_start();
+        history_append_position_at_exit = command_counter;
+    }
+
+    
+    
+
 
     setbuf(stdout, NULL);
     while (1)

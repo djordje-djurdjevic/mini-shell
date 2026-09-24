@@ -10,5 +10,6 @@ bool history_a_flag_helper(char **args);
 
 void write_history_on_exit();
 void read_history_on_start();
+void append_history_on_exit();
 
 #endif

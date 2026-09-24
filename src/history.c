@@ -178,6 +178,14 @@ bool history_a_flag_helper(char **args)
     return false;
 }
 
+void read_history_on_start()
+{
+    char *temp_args_for_history[3];
+    temp_args_for_history[0] = "history";
+    temp_args_for_history[1] = "-r";
+    temp_args_for_history[2] = getenv("HISTFILE");
+    history_r_flag_helper(temp_args_for_history);
+}
 
 void write_history_on_exit()
 {
@@ -188,11 +196,13 @@ void write_history_on_exit()
     history_w_flag_helper(temp_args_for_history);
 }
 
-void read_history_on_start()
+void append_history_on_exit()
 {
     char *temp_args_for_history[3];
     temp_args_for_history[0] = "history";
-    temp_args_for_history[1] = "-r";
+    temp_args_for_history[1] = "-a";
     temp_args_for_history[2] = getenv("HISTFILE");
-    history_r_flag_helper(temp_args_for_history);
+    history_append_position = history_append_position_at_exit;
+    history_a_flag_helper(temp_args_for_history);
 }
+

@@ -42,5 +42,6 @@ extern int command_counter;
 extern char **command_history;
 extern int history_position;
 extern int history_append_position;
+extern int history_append_position_at_exit;
 
 #endif
