@@ -24,6 +24,8 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
     matches[0][0] = '\0';
     int match_count = 0;
 
+
+    //completer
     if(check_completer(input, matches, &match_count)) 
     {   
         // printf("DEBUG: Entered check completer");
@@ -49,6 +51,8 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
         }
     }
 
+
+
     if(i == 0 || is_first_token(input, i)) {
 
         check_builtin_matches(input, i, matches, &match_count);
@@ -59,11 +63,12 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
             check_path_matches(input, i, matches, &match_count, getenv("PATH"), true);
             return resolve_completion(input, 0, i, matches, match_count, tab_counter);
         }
+        //to here is first argument completion
+        
     } else {
         //printf("DEBUG: enter else branch");
         int prefix_i = i;                       // length of last arg (prefix)
         char *last_arg = get_last_arg(input, &prefix_i);
-        
         char *last_slash = strrchr(last_arg, '/');
 
         if (last_slash != NULL ) { //nested file
@@ -77,15 +82,29 @@ int handle_tab_completion(char *input, int i, int *tab_counter)
             int real_start_file = strlen(file_prefix);
 
             char full_dir[MAX_SIZE];
-            char *cwd = getcwd(NULL, 0);
-            strcpy(full_dir, cwd);
-            strcat(full_dir, "/");
-            strcat(full_dir, dir_part);
+            if (last_arg[0] == '/')
+            {
+                strcpy(full_dir, dir_part);
+            }
+            else if(last_arg[0] == '~' && last_arg[1] == '/')
+            {
+                char *home_dir = getenv("HOME");
+                strcpy(full_dir, home_dir);
+                strcat(full_dir, "/");
+                strncat(full_dir, dir_part + 2, strlen(dir_part) - 2);
+            }
+            else 
+            {
+                char *cwd = getcwd(NULL, 0);
+                strcpy(full_dir, cwd);
+                strcat(full_dir, "/");
+                strcat(full_dir, dir_part);
+
+                free(cwd);
+            }
 
             check_path_matches(file_prefix, real_start_file, matches, &match_count, full_dir, false);
-
             free(last_arg);
-            free(cwd);
 
             int real_start = i - prefix_i;  // starting pos in buffer
 

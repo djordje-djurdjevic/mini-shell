@@ -9,7 +9,7 @@
 #include "completion.h"
 #include "history.h"
 
-const char *BUILTINS[] = {"echo", "exit", "type", "pwd", "cd", "complete", "jobs", "history"};
+const char *BUILTINS[] = {"echo", "exit", "type", "pwd", "cd", "complete", "jobs", "history", "declare"};
 const int BUILTINS_COUNT = sizeof(BUILTINS) / sizeof(BUILTINS[0]);
 
 #define MAX_COMPLETIONS 32

@@ -5,7 +5,7 @@ Format: [ ] open, [x] fixed. Include exact input sequence, expected vs actual, a
 
 File completion:
 
-[ ] File completion for absolute paths doesn't work. Currently works only for relative path.
+[x] File completion for absolute paths doesn't work. Currently works only for relative path.
 
 Completer-based completion
 

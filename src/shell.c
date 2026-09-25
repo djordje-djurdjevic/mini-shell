@@ -68,9 +68,6 @@ int main() {
         history_append_position_at_exit = command_counter;
     }
 
-    
-    
-
 
     setbuf(stdout, NULL);
     while (1)

@@ -1,11 +1,10 @@
 #!/bin/bash
-# Test suite for the custom shell (ParseInput / BuiltinFunction / ProgramFunction)
+# Test suite for the custom shell
 # Run: ./tests/run_tests.sh
 
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
-
 
 # ---------------------------------------------------------------------------
 # Colors
@@ -382,14 +381,27 @@ echo world'
 run_output_test 'appending history to a file' 'echo append#
 history -a /tmp/history.txt' 'append#'
 
+#printf("DEBUG C HISTFILE=[%s]\n", histfile ? histfile : "NULL"); this for test, void read_history_on_start()
+# echo "echo preloaded_cmd" > /tmp/test_histfile_$$
+# export HISTFILE=/tmp/test_histfile_$$
+# run_output_test 'loads history from HISTFILE on startup' \
+#     'history' \
+#     '$    1  echo preloaded_cmd'
+
+# echo "BEFORE:"
+# echo "$HISTFILE"
+# cat "$HISTFILE"
+# echo "histfile was: $HISTFILE"
+# #unset HISTFILE
+
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 if [ "$FAILED_TESTS" -gt 0 ]; then
 	passed=$(($TOTAL_TESTS - $FAILED_TESTS))
-    	echo -e "${RED}${BOLD}Tests passed: ${passed}/${TOTAL_TESTS}${NC}"
+	echo -e "${RED}${BOLD}Tests passed: ${passed}/${TOTAL_TESTS}${NC}"	
 	exit 1
 fi
+
 echo -e "${GREEN}${BOLD}ALL TESTS PASSED (${TOTAL_TESTS}/${TOTAL_TESTS})${NC}"
-exit 0
 exit
