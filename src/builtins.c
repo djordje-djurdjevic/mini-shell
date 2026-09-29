@@ -17,6 +17,9 @@ char registered_commands[MAX_COMPLETIONS][MAX_SIZE];
 char registered_paths[MAX_COMPLETIONS][MAX_SIZE];
 int registered_count = 0;
 
+Node *declared_variables = NULL; 
+
+
 bool echo(char **args)
 {
 
@@ -92,6 +95,10 @@ bool run_builtin(char **args, int fd, int target_fd)
     else if (strcmp(args[0], "history") == 0)
     {
         result = history(args);
+    }
+    else if (strcmp(args[0], "declare") == 0)
+    {
+        result = declare(args);
     }
 
 
@@ -305,4 +312,60 @@ void remove_done_jobs()
             job_count--;
         }
     }
+}
+
+bool declare(char **args)
+{
+    if(args[1] == NULL) 
+    {
+        return true;
+    }
+    char *equal_sign = strchr(args[1], '=');
+
+    if(strcmp(args[1], "-p") == 0)
+    {   
+        if(args[2] == NULL) 
+        {
+            return true;    
+        }
+
+        for(Node *cur = declared_variables; cur != NULL; cur = cur->next)
+        {
+            if (strcmp(cur->name, args[2]) == 0)
+            {
+                printf("declare -- foo=\"%s\"\n", cur->value);
+                return true;
+            }
+        }
+
+        fprintf(stderr, "declare: %s: not found\n", args[2]);
+        return true;
+    }
+    else if(equal_sign != NULL)
+    {   
+        // *equal_sign = '\0';
+        // printf("DEBUG: entered statment\n");
+        // printf("DEBUG: %s\n", args[1]);
+        // printf("DEBUG: %s\n", equal_sign+1);
+
+        *equal_sign = '\0';
+        Node *cur;
+        for(cur = declared_variables; cur != NULL; cur = cur->next)
+        {
+            if(strcmp(cur->name, args[1]) == 0)
+            {
+                free(cur->value);
+                cur->value = strdup(equal_sign+1);
+                return true;
+            }
+        }
+
+        Node *new = malloc(sizeof(Node));
+        new->name = strdup(args[1]);
+        new->value = strdup(equal_sign+1);
+        new->next = declared_variables;
+        declared_variables = new;
+    }
+
+    return true;
 }

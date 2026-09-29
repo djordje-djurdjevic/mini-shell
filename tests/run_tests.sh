@@ -394,6 +394,13 @@ history -a /tmp/history.txt' 'append#'
 # echo "histfile was: $HISTFILE"
 # #unset HISTFILE
 
+
+# ---------------------------------------------------------------------------
+# Declare builtin
+# ---------------------------------------------------------------------------
+echo -e "${BOLD}-- declare builtin --${NC}"
+run_output_test 'declare builtin' 'type declare' 'declare is a shell builtin'
+
 # ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------

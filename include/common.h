@@ -44,4 +44,11 @@ extern int history_position;
 extern int history_append_position;
 extern int history_append_position_at_exit;
 
+typedef struct Node
+{
+    char *name;
+    char *value;
+    struct Node *next;
+} Node;
+
 #endif

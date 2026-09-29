@@ -18,6 +18,7 @@
 
 void restore_terminal(void);
 void free_history_commands();
+void free_declared_variables();
 
 int parse_escape_sequence(char *input, int i);
 int up_arrow(char *input, int i);
@@ -67,6 +68,7 @@ int main() {
         read_history_on_start();
         history_append_position_at_exit = command_counter;
     }
+    atexit(free_declared_variables);
 
 
     setbuf(stdout, NULL);
@@ -225,6 +227,21 @@ void free_history_commands()
         free(command_history[i]);
     }
     free(command_history);
+}
+
+void free_declared_variables()
+{
+    Node *cur = declared_variables;
+    while (cur != NULL)
+    {
+        Node *next = cur->next;
+        free(cur->name);
+        free(cur->value);
+        free(cur);
+        cur = next;
+    }
+
+    declared_variables = NULL; 
 }
 
 void restore_terminal(void)

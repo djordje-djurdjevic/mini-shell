@@ -9,6 +9,7 @@ bool type(char *input);
 bool pwd(void);
 bool cd(char *input);
 bool complete(char **args);
+bool declare(char **args);
 
 bool background_jobs();
 void remove_done_jobs();
@@ -20,5 +21,8 @@ extern const int BUILTINS_COUNT;
 extern char registered_commands[][MAX_SIZE];
 extern char registered_paths[][MAX_SIZE];
 extern int registered_count;
+
+extern Node *declared_variables; 
+
 
 #endif
