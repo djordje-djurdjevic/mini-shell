@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "parser.h"
+#include "builtins.h"
 
 
 Pipeline parse_input(char *input, bool *is_background)
@@ -16,9 +17,12 @@ Pipeline parse_input(char *input, bool *is_background)
     char const single_qoute = '\'';
     char const double_qoute = '\"';
     char const backslash = '\\';
+    char const dollar_sign = '$';
+
 
     bool in_single_quotes = false;
     bool in_double_quotes = false;
+    bool variable_swap    = false;
 
     char arg[MAX_SIZE];
     int i_arg = 0;
@@ -74,12 +78,20 @@ Pipeline parse_input(char *input, bool *is_background)
             continue;
         }
 
-        if (input[i] == ' ' && !in_single_quotes && !in_double_quotes)
+        if (input[i] == dollar_sign) //signel quotes double quotes check to add
+        {
+            variable_swap = true;
+            continue;
+        }
+
+        if ((input[i] == ' ' && !in_single_quotes && !in_double_quotes))
         {
             if (i_arg > 0)
             {
-
                 arg[i_arg] = '\0';
+                variable_swap_helper(&variable_swap, arg);
+             
+                //copy to argmuents next arg
                 arguments[num_of_args] = malloc(strlen(arg) + 1); // strdup does this line and line below
                 strcpy(arguments[num_of_args], arg);
                 num_of_args++;
@@ -92,20 +104,24 @@ Pipeline parse_input(char *input, bool *is_background)
                     arguments = realloc(arguments, capacity * sizeof(char *));
                 }
             }
-
+       
             continue;
         }
 
         arg[i_arg++] = input[i];
     }
 
+    //last arg;
+    arg[i_arg] = '\0';
+    variable_swap_helper(&variable_swap, arg);
+    
     if (i_arg > 0)
     {
-        arg[i_arg] = '\0';
         arguments[num_of_args] = malloc(strlen(arg) + 1); // strdup does this line and line below
         strcpy(arguments[num_of_args], arg);
         num_of_args++;
     }
+
 
     // for (int i = 0; i < num_of_args; i++) {
     //     printf("%s|\n", arguments[i]);
@@ -167,5 +183,25 @@ void free_commands(Pipeline pipeline)
             free(pipeline.command[i].args[j]);
         }
         free(pipeline.command[i].args);
+    }
+}
+
+void variable_swap_helper(bool *variable_swap, char arg[])
+{   
+
+    if (*variable_swap) 
+    {
+        //printf("DEBUG: entered variable swap\n");
+        *variable_swap = false;
+
+        Node *cur;
+        for(cur = declared_variables; cur != NULL; cur = cur->next)
+        {   
+            if (strcmp(arg, cur->name) == 0)
+            {
+                strcpy(arg, cur->value);   //printf("DEBUG: Found variable match\n");
+                break;
+            }
+        }
     }
 }

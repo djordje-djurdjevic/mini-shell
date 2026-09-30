@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include "redirect.h"
 #include "common.h"
@@ -348,7 +349,28 @@ bool declare(char **args)
         // printf("DEBUG: %s\n", args[1]);
         // printf("DEBUG: %s\n", equal_sign+1);
 
+        //checking validity
         *equal_sign = '\0';
+
+        bool valid_declare_variable_name = isalpha((unsigned char)args[1][0]) || args[1][0] == '_';
+        if(valid_declare_variable_name) 
+        {   
+            for(int i = 1; args[1][i] != '\0'; i++) 
+            {   
+                char c = args[1][i];     
+                if(!(isalnum((unsigned char)c) || c == '_'))
+                { 
+                    valid_declare_variable_name = false; 
+                    break;
+                }
+            }
+        }
+        else 
+        {
+            valid_declare_variable_name = false; 
+        }    
+
+        //check for duplicates
         Node *cur;
         for(cur = declared_variables; cur != NULL; cur = cur->next)
         {
@@ -360,11 +382,18 @@ bool declare(char **args)
             }
         }
 
-        Node *new = malloc(sizeof(Node));
-        new->name = strdup(args[1]);
-        new->value = strdup(equal_sign+1);
-        new->next = declared_variables;
-        declared_variables = new;
+        if (valid_declare_variable_name)
+        {
+            Node *new = malloc(sizeof(Node));
+            new->name = strdup(args[1]);
+            new->value = strdup(equal_sign + 1);
+            new->next = declared_variables;
+            declared_variables = new;
+        }
+        else
+        {
+            fprintf(stderr, "declare: `%s=%s': not a valid identifier\n", args[1], equal_sign+1);
+        }
     }
 
     return true;
