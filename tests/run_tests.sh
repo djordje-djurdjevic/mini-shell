@@ -413,6 +413,7 @@ echo faa${Var1}' 'faafoo'
 run_output_test 'expanding with braces' 'declare Var1=foo
 declare Var2=faa
 echo ${Var1}${Var2}' 'foofaa'
+run_output_test 'missing variable' 'echo ${missing}test' 'test'
 
 # ---------------------------------------------------------------------------
 # Summary

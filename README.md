@@ -1,61 +1,91 @@
-# mini-shell
+# Shell
 
-A custom Unix shell implemented in C, built from scratch on top of raw POSIX syscalls (`fork`, `execvp`, `dup2`, `open`, termios) — no `readline`, no external parsing libraries.
+A POSIX-style Unix shell written from scratch in C. Built as part of the [CodeCrafters "Build your own Shell"](https://codecrafters.io/challenges/shell) challenge.
 
 ## Features
 
-- **Interactive line editing** — raw terminal mode (non-canonical, no echo) with manual backspace and character handling, so completion and prompt redraw work byte-by-byte.
-- **Tab completion** — context-aware: completes shell builtins and `$PATH` executables when on the first word of the line, and filenames from the current directory for any later argument.
-- Single match: completes inline.
-- Multiple matches: first `Tab` fills in the longest common prefix (LCP); second `Tab` lists all candidates, shell-style.
-- No match: terminal bell.
-- **Quoting & escaping** — supports single quotes (fully literal), double quotes (with `\`, `"`, `$`, `` ` `` escaping inside), and backslash escaping outside quotes.
-- **Output redirection** — `>`, `1>`, `2>` (truncate) and `>>`, `1>>`, `2>>` (append), for both stdout and stderr.
-- **Builtins** — `echo`, `type`, `pwd`, `cd` (including `cd ~`), `exit`.
-- **External programs** — resolved and executed via `$PATH` using `fork` + `execvp`.
-- **Non-interactive mode** — reads commands from stdin (e.g. piped input or a script) when stdin isn't a TTY.
-
-## Building
-
-```sh
-make
-```
-
-No external dependencies beyond the standard C library and POSIX headers (`unistd.h`, `termios.h`, `dirent.h`, `fcntl.h`, `sys/wait.h`).
-
-## Running
-
-```sh
-make run
-./shell
-```
-
-$ echo hello world
-
-hello world
-
-$ type echo
-
-echo is a shell builtin
-
-$ ls > out.txt
-
-$ cat out.txt
-
-## Known limitations / roadmap
-
-- No input redirection (`<`).
-- Fixed-size buffers (`MAX_SIZE = 1024`) for input, arguments, and `$PATH` — very long arguments or an unusually long `$PATH` are not yet bounds-checked everywhere.
-- Tab completion doesn't account for leading whitespace before the first token.
+- **Command execution**: runs builtins and external programs found via `PATH`
+- **Quoting**: single quotes, double quotes and argument tokenizing
+- **Variables**: `declare NAME=value`, expansion with `$NAME` and `${NAME}`
+  - works inside double quotes, not inside single quotes
+  - undefined variables expand to an empty string
+  - unclosed `${` is reported as a `bad substitution` error
+- **Pipelines**: `cmd1 | cmd2 | cmd3`, including builtins in a pipeline
+- **Redirection**: output and error redirection to files
+- **Command history**: in-session history with persistence through `HISTFILE`
+- **Tab completion**: builtins, executables, files, plus programmable completion through external completer scripts
 
 ## Project structure
 
-Split across multiple files under `src/` and `include/`, organized by responsibility:
+```
+.
+├── include/            # Header files (one per module + common.h)
+├── src/
+│   ├── shell.c         # Entry point and main read-parse-execute loop
+│   ├── parser.c        # Tokenizer, quote handling, variable expansion
+│   ├── executor.c      # Runs commands and pipelines
+│   ├── builtins.c      # Builtin commands
+│   ├── pipe.c          # Pipeline setup (pipes, fork, fd handling)
+│   ├── redirect.c      # Output / error redirection
+│   ├── history.c       # Command history and HISTFILE handling
+│   └── completion.c    # Tab completion and completer script support
+├── tests/
+│   ├── run_tests.sh    # Bash test harness
+│   └── completers/     # Python completer scripts used by the tests
+├── EDGE_CASES.md       # Known limitations and deviations from bash
+└── Makefile
+```
 
-- **`shell.c`** — `main`, raw-mode terminal setup/teardown, the input loop (key reading, backspace/tab handling, prompt redraw).
-- **`parser.c` / `parser.h`** — `parse_input`, `free_args`: tokenizes a raw input line into an `argv`-style array, handling quotes and escapes.
-- **`redirect.c` / `redirect.h`** — `check_output_redirect` / `restore_std`: detects and strips redirection operators from args, opens the target file, and swaps `stdout`/`stderr` via `dup2` around command execution.
-- **`builtins.c` / `builtins.h`** — `echo`, `type`, `pwd`, `cd`, `run_builtin`: implementations and dispatch for shell builtins.
-- **`executor.c` / `executor.h`** — `run_program`: `fork` + `execvp` for external programs.
-- **`completion.c` / `completion.h`** — `handle_tab_completion` and helpers (`check_builtin_matches`, `check_path_matches`, `get_file_completion_prefix`, `is_first_token`, `resolve_completion`, `longest_common_prefix`): matches builtins, `$PATH` executables, and filenames; computes LCP; renders completion or candidate list.
-- **`common.h`** — shared constants (`MAX_SIZE`, `MAX_MATCHES`) and `extern` globals (`orig_termios`, `is_interactive_global`).
+### How a command flows through the shell
+
+1. `shell.c` reads a line of input.
+2. `parser.c` tokenizes it, handles quotes, expands variables and builds a pipeline.
+3. `executor.c` runs it: builtins directly, external programs through `fork` + `exec`.
+4. `pipe.c` and `redirect.c` wire up file descriptors where the line contains `|` or redirections.
+
+## Build and run
+
+Requirements: `gcc` and `make`.
+
+```bash
+make        # build the ./shell binary
+make run    # build and start the shell
+```
+
+The project compiles with `-Wall -Wextra -g`.
+
+## Example session
+
+```
+$ declare name=world
+$ echo hello ${name}
+hello world
+$ echo 'no $expansion here'
+no $expansion here
+$ echo one two three | wc -w
+3
+```
+
+## Testing
+
+```bash
+bash tests/run_tests.sh
+```
+
+The tests run the shell against expected output. Completion tests use the scripts in `tests/completers/`.
+
+For memory errors, run under Valgrind:
+
+```bash
+valgrind --leak-check=full ./shell
+```
+
+## Known limitations
+
+Some behavior deliberately differs from bash (for example, empty quoted arguments and escaping `\$`). See [EDGE_CASES.md](EDGE_CASES.md) for the full list.
+
+## What I learned
+
+- Process management with `fork`, `execvp`, `waitpid` and file descriptor lifecycle in pipelines
+- Writing a character-by-character tokenizer with quote and expansion state
+- Manual memory management and debugging with Valgrind in a multi-module C project

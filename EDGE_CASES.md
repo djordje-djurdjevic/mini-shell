@@ -1,25 +1,87 @@
-Edge Case Tracker
+# Edge Case Tracker
 
-Format: [ ] open, [x] fixed. Include exact input sequence, expected vs actual, and root cause once found.
+Known bugs, limitations and deviations from bash.
 
+**Status:** `[ ]` open, `[x]` fixed
+**Entry format:** input → expected → actual → root cause (once found) → fix idea
 
-File completion:
+---
 
-[x] File completion for absolute paths doesn't work. Currently works only for relative path.
+## File completion
 
-Completer-based completion
+- [x] **Absolute paths not completed**
+  - Input: `ls /usr/bi<TAB>`
+  - Expected: completes to `/usr/bin/`
+  - Actual: worked only for relative paths
 
-[ ]  Duplication when completing from an empty current word inside check_completer branch Input: git checkout <TAB> (trailing space, second tab press) Expected: LCP/candidate logic runs against empty current word, no duplication of previous token Actual: still duplicates something (e.g. "test checkout che").
+---
 
-[ ] Completer doesn't check if the the path to the completer script is a an actual path. Input: "complete -C invalid/compelter/path func" Exptected: a message saying that that the path to completer script is of wrong format Actual: nothing happens just eats the path as if it's a legit path. 
+## Completer-based completion
 
+- [ ] **Duplicated text when the current word is empty**
+  - Input: `git checkout <TAB>` (trailing space, second Tab press)
+  - Expected: LCP / candidate logic runs against an empty current word, previous tokens are not repeated
+  - Actual: previous token is duplicated (e.g. `test checkout che`)
+  - Root cause: not found yet, happens in the `check_completer` branch
+  - Debug idea: print the word passed to the completer and the prefix used for the LCP when the word is empty
 
-Shell input
+- [ ] **Completer path is never validated**
+  - Input: `complete -C invalid/completer/path func`
+  - Expected: an error message that the completer script path is invalid
+  - Actual: silently accepted as if valid
+  - Note: bash itself does not validate at registration time, it fails when completion runs. Decide whether to match bash or validate early with `access(path, X_OK)`, and record the decision here.
 
-[ ] Cannot move freely with arrows left/right trough the current input Expected: to move back and fourth trough the current input text Actual: nothing happnes just ignores the arrow keys and escape sequences.
+---
 
-[ ] Completion doesn't  work if first tokens are spaces. Input: "____ech" Expected: to complete the input to "___echo" Actual: Rings the bell like there aren't any matches. 
+## Shell input
 
-Piping commands
+- [ ] **Left / right arrows are ignored**
+  - Expected: cursor moves through the current input, characters are inserted and deleted at the cursor
+  - Actual: escape sequences (`ESC [ C`, `ESC [ D`) are ignored
+  - Root cause: input is handled as an append-only buffer, there is no cursor position
+  - Fix idea: keep `len` and `cursor` separately, insert at `cursor`, redraw the line after every edit. Same change enables Home, End and Delete.
 
-[ ] Problem: run_builtin returns a single bool that conflates two different meanings — "this isn't a builtin" (should fall through to execvp) vs. "this is a builtin but it failed internally" (e.g. cd into a nonexistent directory). Both cases currently return false. Risk: In the pipeline child code, if (run_builtin(...)) { _exit(0); } else { execvp(...); } treats false as "not a builtin, try execvp." If a real builtin fails (e.g. cd bad_dir | ...), the code will wrongly attempt execvp("cd", ...) instead of correctly exiting after a failed builtin.
+- [ ] **Completion fails when the input starts with spaces**
+  - Input: `____ech<TAB>` (underscores are spaces)
+  - Expected: `____echo`
+  - Actual: bell, as if there were no matches
+  - Likely root cause: the first token is taken from the start of the buffer without skipping leading whitespace, so the "command position" check fails
+  - Fix idea: skip leading whitespace before deciding whether the word is in command position
+
+---
+
+## Piping
+
+- [ ] **`run_builtin` conflates "not a builtin" and "builtin failed"**
+  - Input: `cd bad_dir | cat`
+  - Expected: `cd` runs as a builtin, prints its error, the child exits with status 1
+  - Actual: `run_builtin` returns `false` in both cases, so the child falls through to `execvp("cd", ...)`
+  - Root cause: a single `bool` carries two different meanings
+  - Fix idea: return a three-state result
+
+---
+
+## Variable expansion
+
+- [ ] **Empty quoted argument is dropped**
+  - Input: `echo "$UNDEFINED" x` or `echo "" x`
+  - Expected: `echo` receives two arguments, the first empty
+  - Actual: the empty token is skipped because the parser only adds a token when `i_arg > 0`
+  - Fix idea: add a `token_started` flag set when a quote opens or a variable expands, and use it instead of `i_arg > 0`
+
+- [ ] **Buffer capacity checks**
+  - Input: a variable whose value is longer than the token buffer, or a name longer than the name buffer
+  - Expected: no overflow (truncate or report an error)
+  - Risk: `name[n++]` and the copy into `arg` need bounds checks
+
+- [ ] **Bare `$` and `${}`**
+  - Input: `echo $`, `echo "cost: $"`, `echo ${}`
+  - Expected: `$` stays literal for a bare `$`, `${}` gives `bad substitution`
+
+- [ ] **Special parameters** such as `$?`, `$$`, `$0` are not supported
+
+---
+
+## Not checked yet
+
+- Very long input lines (input buffer size)
