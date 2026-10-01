@@ -400,6 +400,19 @@ history -a /tmp/history.txt' 'append#'
 # ---------------------------------------------------------------------------
 echo -e "${BOLD}-- declare builtin --${NC}"
 run_output_test 'declare builtin' 'type declare' 'declare is a shell builtin'
+run_output_test 'print missing variable' 'declare -p not_valid_variable' 'declare: not_valid_variable: not found'
+run_output_test 'declaring variables' 'declare foo=bar
+declare -p foo' 'declare -- foo="bar"'
+run_output_test 'validating variable names' 'declare 67=x' $'declare: `67=x\': not a valid identifier'
+run_output_test 'expanding variables' 'declare Variable_1=value
+echo $Variable_1' 'value'
+run_output_test 'expanding with braces' 'declare Var1=foo
+echo ${Var1}faa' 'foofaa'
+run_output_test 'expanding with braces' 'declare Var1=foo
+echo faa${Var1}' 'faafoo'
+run_output_test 'expanding with braces' 'declare Var1=foo
+declare Var2=faa
+echo ${Var1}${Var2}' 'foofaa'
 
 # ---------------------------------------------------------------------------
 # Summary

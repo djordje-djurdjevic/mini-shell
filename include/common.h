@@ -11,7 +11,6 @@
 #define STATUS_LEN 25
 #define MAX_PIPELINE 16
 
-
 extern struct termios orig_termios;
 extern bool is_interactive_global;
 

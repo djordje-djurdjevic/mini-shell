@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>      // malloc, realloc
 #include <string.h>      // strcpy, strlen
+#include <ctype.h>
 
 #include "common.h"
 #include "parser.h"
@@ -18,11 +19,13 @@ Pipeline parse_input(char *input, bool *is_background)
     char const double_qoute = '\"';
     char const backslash = '\\';
     char const dollar_sign = '$';
+    char const open_curly_bracket = '{';
+    char const closed_curly_bracket = '}';
 
 
     bool in_single_quotes = false;
     bool in_double_quotes = false;
-    bool variable_swap    = false;
+    bool closed_curly_bracket_error = false;
 
     char arg[MAX_SIZE];
     int i_arg = 0;
@@ -78,19 +81,61 @@ Pipeline parse_input(char *input, bool *is_background)
             continue;
         }
 
-        if (input[i] == dollar_sign) //signel quotes double quotes check to add
+        if (input[i] == dollar_sign && !in_single_quotes)
         {
-            variable_swap = true;
+            char name[MAX_SIZE];
+            int n = 0;
+            int j = i + 1;
+            int last;
+            bool braced = (input[j] == open_curly_bracket);
+
+            if (braced)
+            {   
+                j++; //brace
+                while(input[j] != '\0' && input[j] != closed_curly_bracket)
+                {
+                    name[n++] = input[j];
+                    j++;
+                }
+                if (input[j] == '\0')          // no closed bracket
+                {
+                    closed_curly_bracket_error = true;
+                }
+                last = j; 
+            }
+            else
+            {
+                while(isalnum((unsigned char)input[j]) || input[j] == '_')
+                {
+                    name[n++] = input[j];
+                    j++;
+                }
+                last = j - 1; 
+            }
+
+            name[n] = '\0';
+            //printf("DEBUG: name=%s\n", name);
+            variable_swap_helper(name);
+            //printf("DEBUG: val=%s\n", name);
+
+            //printf("DEBUG: arg=%s\n", arg);
+            arg[i_arg] = '\0';
+            strcat(arg , name);
+            //printf("DEBUG: arg after=%s\n", arg);
+            i_arg = strlen(arg);
+
+            i = last;
             continue;
         }
+
 
         if ((input[i] == ' ' && !in_single_quotes && !in_double_quotes))
         {
             if (i_arg > 0)
             {
                 arg[i_arg] = '\0';
-                variable_swap_helper(&variable_swap, arg);
-             
+                
+
                 //copy to argmuents next arg
                 arguments[num_of_args] = malloc(strlen(arg) + 1); // strdup does this line and line below
                 strcpy(arguments[num_of_args], arg);
@@ -113,13 +158,28 @@ Pipeline parse_input(char *input, bool *is_background)
 
     //last arg;
     arg[i_arg] = '\0';
-    variable_swap_helper(&variable_swap, arg);
+    //variable_swap_helper(&variable_swap, arg);
     
     if (i_arg > 0)
     {
         arguments[num_of_args] = malloc(strlen(arg) + 1); // strdup does this line and line below
         strcpy(arguments[num_of_args], arg);
         num_of_args++;
+    }
+
+
+    //declare error bad variable
+    if(closed_curly_bracket_error)
+    {
+        fprintf(stderr, "bad substitution: no closing \"}\" in %s\n", input); //should be the arg not whole input
+
+        Pipeline p_error;
+        p_error.num_of_commands = 1;
+        p_error.command[0].args = malloc(sizeof(char *));
+        p_error.command[0].args[0] = NULL;
+
+        free(arguments);        
+        return p_error;
     }
 
 
@@ -186,22 +246,17 @@ void free_commands(Pipeline pipeline)
     }
 }
 
-void variable_swap_helper(bool *variable_swap, char arg[])
+void variable_swap_helper(char arg[])
 {   
-
-    if (*variable_swap) 
-    {
-        //printf("DEBUG: entered variable swap\n");
-        *variable_swap = false;
-
-        Node *cur;
-        for(cur = declared_variables; cur != NULL; cur = cur->next)
-        {   
-            if (strcmp(arg, cur->name) == 0)
-            {
-                strcpy(arg, cur->value);   //printf("DEBUG: Found variable match\n");
-                break;
-            }
+    Node *cur;
+    for(cur = declared_variables; cur != NULL; cur = cur->next)
+    {   
+        if (strcmp(arg, cur->name) == 0)
+        {
+            strcpy(arg, cur->value);   //printf("DEBUG: Found variable match\n");
+            return;
         }
     }
+
+    strcpy(arg, "");
 }

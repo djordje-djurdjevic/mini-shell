@@ -207,7 +207,7 @@ int main() {
             continue;
         }
 
-        printf("%s: command not found\n", pipeline.command[0].args[0]);
+        printf("%s: command not found\n", pipeline.command[0].args[0]);        
 
         if (fd != -1) 
         {

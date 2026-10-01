@@ -340,6 +340,10 @@ bool is_first_token(const char *input, int cursor_pos) {
 bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
 
     //printf("[DEBUG registered_count=%d]\n", registered_count);
+    if (registered_count == 0)
+    {
+        return false;
+    }
 
     bool dummy_background;
     Pipeline pipeline = parse_input(input, &dummy_background);
