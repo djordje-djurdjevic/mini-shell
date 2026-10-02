@@ -209,6 +209,7 @@ Pipeline parse_input(char *input, bool *is_background)
     {
         if(strcmp(arguments[i], "|") == 0)
         {   
+            free(arguments[i]);
             pipeline.command[pipeline.num_of_commands].args[num_of_args] = NULL;        
             pipeline.command[++pipeline.num_of_commands].args = malloc(capacity * sizeof(char *));
             num_of_args = 0;

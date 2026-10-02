@@ -69,7 +69,7 @@ int main() {
         history_append_position_at_exit = command_counter;
     }
     atexit(free_declared_variables);
-
+    atexit();
 
     setbuf(stdout, NULL);
     while (1)

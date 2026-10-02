@@ -450,6 +450,8 @@ bool check_completer(char *input, char matches[][MAX_SIZE], int *match_count) {
             }
         }
     }
+    free_commands(pipeline);
+
 
     return false;
 }
