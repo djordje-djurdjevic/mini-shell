@@ -89,3 +89,5 @@ Some behavior deliberately differs from bash (for example, empty quoted argument
 - Process management with `fork`, `execvp`, `waitpid` and file descriptor lifecycle in pipelines
 - Writing a character-by-character tokenizer with quote and expansion state
 - Manual memory management and debugging with Valgrind in a multi-module C project
+
+Licensed under the MIT License
