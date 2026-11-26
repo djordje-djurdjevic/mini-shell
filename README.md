@@ -1,93 +1,89 @@
 # Shell
 
-A POSIX-style Unix shell written from scratch in C. Built as part of the [CodeCrafters "Build your own Shell"](https://codecrafters.io/challenges/shell) challenge.
+An interactive Unix shell written in C for the [CodeCrafters Shell challenge](https://codecrafters.io/challenges/shell). It runs builtins and external programs, connects commands with pipes, and handles terminal input directly with `termios`.
 
-## Features
+## Quick start
 
-- **Command execution**: runs builtins and external programs found via `PATH`
-- **Quoting**: single quotes, double quotes and argument tokenizing
-- **Variables**: `declare NAME=value`, expansion with `$NAME` and `${NAME}`
-  - works inside double quotes, not inside single quotes
-  - undefined variables expand to an empty string
-  - unclosed `${` is reported as a `bad substitution` error
-- **Pipelines**: `cmd1 | cmd2 | cmd3`, including builtins in a pipeline
-- **Redirection**: output and error redirection to files
-- **Command history**: in-session history with persistence through `HISTFILE`
-- **Tab completion**: builtins, executables, files, plus programmable completion through external completer scripts
+Build and run on Linux with GCC and Make.
 
-## Project structure
-
-```
-.
-├── include/            # Header files (one per module + common.h)
-├── src/
-│   ├── shell.c         # Entry point and main read-parse-execute loop
-│   ├── parser.c        # Tokenizer, quote handling, variable expansion
-│   ├── executor.c      # Runs commands and pipelines
-│   ├── builtins.c      # Builtin commands
-│   ├── pipe.c          # Pipeline setup (pipes, fork, fd handling)
-│   ├── redirect.c      # Output / error redirection
-│   ├── history.c       # Command history and HISTFILE handling
-│   └── completion.c    # Tab completion and completer script support
-├── tests/
-│   ├── run_tests.sh    # Bash test harness
-│   └── completers/     # Python completer scripts used by the tests
-├── EDGE_CASES.md       # Known limitations and deviations from bash
-└── Makefile
+```sh
+make
+./shell
 ```
 
-### How a command flows through the shell
-
-1. `shell.c` reads a line of input.
-2. `parser.c` tokenizes it, handles quotes, expands variables and builds a pipeline.
-3. `executor.c` runs it: builtins directly, external programs through `fork` + `exec`.
-4. `pipe.c` and `redirect.c` wire up file descriptors where the line contains `|` or redirections.
-
-## Build and run
-
-Requirements: `gcc` and `make`.
-
-```bash
-make        # build the ./shell binary
-make run    # build and start the shell
-```
-
-The project compiles with `-Wall -Wextra -g`.
+You can also use `make run` to build and launch in one step. Type `exit` to leave the shell.
 
 ## Example session
 
-```
+```text
 $ declare name=world
-$ echo hello ${name}
-hello world
-$ echo 'no $expansion here'
-no $expansion here
+$ echo "Hello, ${name}"
+Hello, world
+$ echo 'Literal $name'
+Literal $name
 $ echo one two three | wc -w
 3
+$ echo first line > notes.txt
+$ echo second line >> notes.txt
+$ cat notes.txt
+first line
+second line
 ```
+
+## Features
+
+- Run programs by path or look them up through `PATH`. Use `type` to see how a command resolves.
+- Define shell-local variables with `declare NAME=value`. Double quotes allow expansion and single quotes preserve literal text.
+- Connect builtins and external programs with pipelines. Redirect stdout with `>` or `>>` and stderr with `2>` or `2>>`. Use spaces around operators and put output redirection at the end of the final pipeline stage.
+- Run external commands or pipelines in the background with a space-separated trailing `&`. Use `jobs` to list tracked processes.
+- Use Up and Down to browse history, Backspace to edit the end of the line, and Tab to complete commands and paths.
+
+### Persistent history
+
+Set `HISTFILE` in your regular terminal when launching the shell. Interactive sessions read the history file at startup and append new entries on exit.
+
+```sh
+HISTFILE="$HOME/.codecrafters-shell-history" ./shell
+```
+
+Inside the shell, use `history` to view entries. The `-r`, `-w`, and `-a` options read, write, and append entries to a specified file.
+
+### Programmable Tab completion
+
+From the repository root, register the bundled Python 3 completer inside the shell.
+
+```text
+$ complete -C ./tests/completers/completer_git_args.py git
+```
+
+Type `git remote set` and press **Tab** to complete the last word to `set-url`. A completer receives the command name, current word, and previous word as arguments, plus `COMP_LINE` and `COMP_POINT` in its environment. It prints one candidate per line to stdout.
+
+Use `complete -p git` to inspect the registration and `complete -r git` to remove it.
+
+## How it works
+
+1. [`shell.c`](src/shell.c) reads terminal input and dispatches commands.
+2. [`parser.c`](src/parser.c) handles quoting and expansion, then builds a pipeline of argument lists.
+3. [`builtins.c`](src/builtins.c) runs standalone builtins in the shell process so commands such as `cd` can update its state. [`executor.c`](src/executor.c) launches external programs with `fork` and `execvp`.
+4. [`pipe.c`](src/pipe.c) connects pipeline stages running in child processes. [`redirect.c`](src/redirect.c) opens output files for redirection.
+
+[`history.c`](src/history.c) handles history files and [`completion.c`](src/completion.c) generates Tab completion candidates.
 
 ## Testing
 
-```bash
+```sh
+make
 bash tests/run_tests.sh
 ```
 
-The tests run the shell against expected output. Completion tests use the scripts in `tests/completers/`.
-
-For memory errors, run under Valgrind:
-
-```bash
-valgrind --leak-check=full ./shell
-```
-
-## Known limitations
-
-Some behavior deliberately differs from bash (for example, empty quoted arguments and escaping `\$`). See [EDGE_CASES.md](EDGE_CASES.md) for the full list.
+Two assertions use the original checkout path, so `pwd` and relative `cd` can fail in another directory. The command lookup test expects `python3` at `/usr/bin/python3`. See [known edge cases](EDGE_CASES.md) for the limits of this implementation.
 
 ## What I learned
 
-- Process management with `fork`, `execvp`, `waitpid` and file descriptor lifecycle in pipelines
-- Writing a character-by-character tokenizer with quote and expansion state
-- Manual memory management and debugging with Valgrind in a multi-module C project
+- Managing child processes and file descriptors with `fork`, `execvp`, `waitpid`, and `dup2`.
+- Tracking quotes and variable expansion in a character-by-character tokenizer.
+- Managing memory and debugging a multi-module C program with Valgrind.
 
-Licensed under the MIT License
+## License
+
+[MIT](LICENSE)
